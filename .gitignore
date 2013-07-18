@@ -11,3 +11,9 @@
 *.lai
 *.la
 *.a
+
+# Editors backup files
+*~
+
+# CMake fies
+.user
