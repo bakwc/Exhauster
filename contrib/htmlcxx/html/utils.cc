@@ -239,7 +239,10 @@ namespace htmlcxx {
 			{ "thorn", 254 },
 			{ "yuml", 255 },
 			/* 100 */
+            { "mdash", '-' },
+
 			{ NULL, 0 },
+
 		};
 
 		string decode_entities(const string &str)

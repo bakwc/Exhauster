@@ -1,7 +1,9 @@
 #include <assert.h>
 #include <algorithm>
+#include <limits>
 #include <boost/algorithm/string.hpp>
 
+#include <contrib/htmlcxx/html/utils.h>
 #include <utils/string.h>
 
 #include "exhauster.h"
@@ -107,13 +109,15 @@ bool HasInterestingContent(tree<HTML::Node>::iterator it, bool hard, size_t* wor
         replace(text.begin(), text.end(), '\n', ' ');
         replace(text.begin(), text.end(), '\t', ' ');
         size_t wordsCnt = CalcWordsCount(text);
+        size_t punctsCnt = CalcPunctCount(text);
         if (words) {
             *words += wordsCnt;
         }
         if (hard) {
-            return wordsCnt >= 4 && text.find(".") != string::npos;
+            return wordsCnt >= 4 && HasPunct(text);
         } else {
-            return !TextFiltered(text) && wordsCnt >= 1;
+            return !TextFiltered(text) && (wordsCnt >= 1 || punctsCnt >= 1);
+            return true;
         }
     }
 
@@ -208,7 +212,10 @@ bool Filter(tree<HTML::Node>& dom, tree<HTML::Node>::iterator it) {
             }
         }
 
-        if ((tag == "div" || tag == "table") && it.number_of_children() >= 1) {
+        if ((tag == "div" || tag == "table" ||
+             tag == "ul" || tag == "p") &&
+                it.number_of_children() >= 1)
+        {
             if (!HasInterestingContent(it)) {
                 return true;
             }
@@ -353,25 +360,41 @@ void MakeBlocks(vector<TContentBlock>& blocks, const TElements& elements) {
     string elementPath = elements.begin()->Path;
     current.Path = elementPath;
     for (TElements::const_iterator it = elements.begin(); it != elements.end(); it++) {
+        string currentText = it->Text;
+        currentText = HTML::decode_entities(currentText);
+
+        float distance = numeric_limits<float>::max();
+        TElements::const_iterator jt = it;
+        jt++;
+        if (jt != elements.end()) {
+            distance = GetPathDistance(it->Path, jt->Path);
+        }
+
+        if (distance > 1.6) {
+            currentText = ImproveText(currentText);
+        }
+
         if (it->Type & TP_Header || GetPathDistance(elementPath, it->Path) > 5) {
             if (CalcWordsCount(current.Text) > 6) {
+                current.Text = ImproveText(current.Text);
                 blocks.push_back(current);
             }
             current = TContentBlock();
             current.Path = it->Path;
             elementPath = it->Path;
             if (it->Type & TP_Header) {
-                current.Title = it->Text;
+                current.Title = currentText;
             }
         }
         if (it->Type & TP_Text) {
-            current.Text += it->Text + " "; // todo: add dot if required
+            current.Text += currentText + " "; // todo: add dot if required
             current.Path = GetCommonPath(current.Path, it->Path);
             elementPath = it->Path;
         }
     }
 
     if (CalcWordsCount(current.Text) > 6) {
+        current.Text = ImproveText(current.Text);
         blocks.push_back(current);
     }
 }
