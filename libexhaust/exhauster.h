@@ -28,6 +28,7 @@ bool ClassFiltered(const string& name);
 string GetTag(tree<HTML::Node>::iterator it);
 
 bool HasInterestingContent(tree<HTML::Node>::iterator it,
+                           string parentTag = "",
                            bool hard = true,
                            size_t* words = NULL);
 

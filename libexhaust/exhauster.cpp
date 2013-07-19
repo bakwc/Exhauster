@@ -71,6 +71,12 @@ bool ClassFiltered(const string& name) {
     return false;
 }
 
+bool IsHeader(const string& tag) {
+    if (tag.size() == 2 && tag[0] == 'h' && isdigit(tag[1])) {
+        return true;
+    }
+}
+
 string GetTag(tree<HTML::Node>::iterator it) {
     string tag;
     HTML::Node& node = *it;
@@ -85,16 +91,24 @@ string GetTag(tree<HTML::Node>::iterator it) {
 /** @brief detects if element (and subelements) has interesting content in it
   * @param hard - true for single elements, false to check elements with child
   */
-bool HasInterestingContent(tree<HTML::Node>::iterator it, bool hard, size_t* words) {
+bool HasInterestingContent(tree<HTML::Node>::iterator it,
+                           string parentTag,
+                           bool hard,
+                           size_t* words)
+{
     string tag = GetTag(it);
-    if (!hard && (tag == "a" || it->isComment() ||
-            tag == "li"))
-    {
+    size_t wordsThreshold = 4;
+
+    if (!hard && it->isComment()) {
         return false;
     }
 
-    if (tag == "option" ) {
+    if (tag == "option" || tag == "a" || IsHeader(tag)) {
         return false;
+    }
+
+    if (parentTag == "li") {
+        wordsThreshold = 21;
     }
 
     if (hard && tag == "img") {
@@ -114,7 +128,7 @@ bool HasInterestingContent(tree<HTML::Node>::iterator it, bool hard, size_t* wor
             *words += wordsCnt;
         }
         if (hard) {
-            return wordsCnt >= 4 && HasPunct(text);
+            return wordsCnt >= wordsThreshold && HasPunct(text);
         } else {
             return !TextFiltered(text) && (wordsCnt >= 1 || punctsCnt >= 1);
             return true;
@@ -124,7 +138,7 @@ bool HasInterestingContent(tree<HTML::Node>::iterator it, bool hard, size_t* wor
     bool result = false;
     tree<HTML::Node>::iterator jt = it.begin();
     for (;jt != it.end(); jt++) {
-        result |= HasInterestingContent(jt, hard, words);
+        result |= HasInterestingContent(jt, tag, hard, words);
         jt.skip_children();
     }
 
@@ -216,7 +230,7 @@ bool Filter(tree<HTML::Node>& dom, tree<HTML::Node>::iterator it) {
              tag == "ul" || tag == "p") &&
                 it.number_of_children() >= 1)
         {
-            if (!HasInterestingContent(it)) {
+            if (!HasInterestingContent(it, tag)) {
                 return true;
             }
         }
@@ -225,7 +239,7 @@ bool Filter(tree<HTML::Node>& dom, tree<HTML::Node>::iterator it) {
             string childTag = GetTag(it.begin());
             if (tag == "div" && childTag == "div") {
                 size_t words = 0;
-                HasInterestingContent(it.begin(), false, &words);
+                HasInterestingContent(it.begin(), tag, false, &words);
                 if (words < 12) {
                     return true;
                 }
@@ -234,7 +248,7 @@ bool Filter(tree<HTML::Node>& dom, tree<HTML::Node>::iterator it) {
 
         return false;
     } else {
-        return !HasInterestingContent(it, false);
+        return !HasInterestingContent(it, "", false);
     }
 }
 
@@ -316,7 +330,7 @@ void MakeElements(TElements& elements,
             }
         }
         path += "/";
-        if (tag.size() == 2 && tag[0] == 'h' && isdigit(tag[1])) {
+        if (IsHeader(tag)) {
             elementType |= TP_Header;
         }
         if (tag == "a") {
@@ -357,8 +371,8 @@ void TrimHeaderElements(TElements& elements) {
 
 void MakeBlocks(vector<TContentBlock>& blocks, const TElements& elements) {
     TContentBlock current;
-    string elementPath = elements.begin()->Path;
-    current.Path = elementPath;
+    string prevPath = elements.begin()->Path;
+    current.Path = prevPath;
     for (TElements::const_iterator it = elements.begin(); it != elements.end(); it++) {
         string currentText = it->Text;
         currentText = HTML::decode_entities(currentText);
@@ -374,22 +388,22 @@ void MakeBlocks(vector<TContentBlock>& blocks, const TElements& elements) {
             currentText = ImproveText(currentText);
         }
 
-        if (it->Type & TP_Header || GetPathDistance(elementPath, it->Path) > 5) {
+        if (it->Type & TP_Header || GetPathDistance(prevPath, it->Path) > 5) {
             if (CalcWordsCount(current.Text) > 6) {
                 current.Text = ImproveText(current.Text);
                 blocks.push_back(current);
             }
             current = TContentBlock();
             current.Path = it->Path;
-            elementPath = it->Path;
+            prevPath = it->Path;
             if (it->Type & TP_Header) {
                 current.Title = currentText;
             }
         }
-        if (it->Type & TP_Text) {
+        if ((it->Type & TP_Text) && !(it->Type & TP_Header)) {
             current.Text += currentText + " "; // todo: add dot if required
             current.Path = GetCommonPath(current.Path, it->Path);
-            elementPath = it->Path;
+            prevPath = it->Path;
         }
     }
 
