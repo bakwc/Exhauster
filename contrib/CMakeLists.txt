@@ -1,1 +1,2 @@
 add_subdirectory(htmlcxx)
+add_subdirectory(mongoose)

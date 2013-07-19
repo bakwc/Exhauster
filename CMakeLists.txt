@@ -1,9 +1,12 @@
 cmake_minimum_required(VERSION 2.6)
 project(exhauster)
 
+set(CMAKE_CXX_FLAGS "-std=c++0x")
+
 set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
+
 find_package(Boost 1.48.0 COMPONENTS locale)
 
 include_directories (${PROJECT_SOURCE_DIR})
@@ -13,7 +16,8 @@ endif()
 
 link_directories (${PROJECT_BINARY_DIR}/utils
                   ${PROJECT_BINARY_DIR}/libexhaust
-                  ${PROJECT_BINARY_DIR}/contrib/htmlcxx/html)
+                  ${PROJECT_BINARY_DIR}/contrib/htmlcxx/html
+                  ${PROJECT_BINARY_DIR}/contrib/htmlcxx/mongoose)
 
 add_subdirectory(utils)
 add_subdirectory(libexhaust)
