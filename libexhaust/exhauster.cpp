@@ -8,6 +8,8 @@
 
 using namespace std;
 
+namespace NExhauster {
+
 // todo: rewrite using regexps... or not
 bool CanBeDate(const string& word) {
     if (word.size() == 2 || word.size() == 4) {
@@ -146,6 +148,89 @@ bool CheckPair(const string& parent,
     return false;
 }
 
+/** @brief filters element and sub-elements;
+  *   removes filtered elements from tree
+  */
+bool Filter(tree<HTML::Node>& dom, tree<HTML::Node>::iterator it) {
+    HTML::Node& node = *it;
+    if (node.isComment()) {
+        return true;
+    }
+    if (node.isTag()) {
+        string tag = GetTag(it);
+
+        if (tag == "head" || tag == "script" || tag == "input" ||
+                tag == "iframe" || tag == "frame" || tag == "img" ||
+                tag == "style" || tag == "textarea" || tag == "footer" ||
+                tag == "aside" || tag == "select" || tag == "option" ||
+                tag == "noscript") // "ul" should stay
+        {
+            return true;
+        }
+
+        if (it.number_of_children() == 0) {
+            return (tag != "img");
+        }
+
+        node.parseAttributes();
+        if (node.attribute("onclick").first) {
+            return true;
+        }
+
+        if (ClassFiltered(node.attribute("class").second) ||
+            ClassFiltered(node.attribute("id").second))
+        {
+             return true;
+        }
+
+        bool result = true;
+        tree<HTML::Node>::iterator jt;
+        for (jt = it.begin(); jt != it.end();) {
+            if (Filter(dom, jt)) {
+                jt = dom.erase(jt);
+            } else {
+                result = false;
+                jt.skip_children();
+                jt++;
+            }
+        }
+        if (result) {
+            return true;
+        }
+
+        // todo: remove if unused
+        if (it.number_of_children() > 1) {
+            result = false;
+            result |= CheckPair("div", "div", tag, it);
+            //result |= check_pair("ul", "li", tag, it);
+            if (result) {
+                return true;
+            }
+        }
+
+        if ((tag == "div" || tag == "table") && it.number_of_children() >= 1) {
+            if (!HasInterestingContent(it)) {
+                return true;
+            }
+        }
+
+        if (it.number_of_children() == 1) {
+            string childTag = GetTag(it.begin());
+            if (tag == "div" && childTag == "div") {
+                size_t words = 0;
+                HasInterestingContent(it.begin(), false, &words);
+                if (words < 12) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    } else {
+        return !HasInterestingContent(it, false);
+    }
+}
+
 
 ///  ---- paths ----
 
@@ -263,8 +348,8 @@ void TrimHeaderElements(TElements& elements) {
     }
 }
 
-void MakeBlocks(vector<TBlock>& blocks, const TElements& elements) {
-    TBlock current;
+void MakeBlocks(vector<TContentBlock>& blocks, const TElements& elements) {
+    TContentBlock current;
     string elementPath = elements.begin()->Path;
     current.Path = elementPath;
     for (TElements::const_iterator it = elements.begin(); it != elements.end(); it++) {
@@ -272,7 +357,7 @@ void MakeBlocks(vector<TBlock>& blocks, const TElements& elements) {
             if (CalcWordsCount(current.Text) > 6) {
                 blocks.push_back(current);
             }
-            current = TBlock();
+            current = TContentBlock();
             current.Path = it->Path;
             elementPath = it->Path;
             if (it->Type & TP_Header) {
@@ -291,23 +376,45 @@ void MakeBlocks(vector<TBlock>& blocks, const TElements& elements) {
     }
 }
 
-
-
-vector<TBlock> ExhausteContent(const string& htmlData,
-                               bool decode,
-                               const string& encoding)
+TContentBlock ExhausteMainContent(const string& htmlData,
+                           const TSettings& settings)
 {
-    vector<TBlock> blocks;
+    return ExhausteContent(htmlData, settings)[0];
+}
 
-    // todo: implement
+
+vector<TContentBlock> ExhausteContent(const string& htmlData,
+                               const TSettings& settings)
+{
+    HTML::ParserDom parser;
+    tree<HTML::Node> dom = parser.parseTree(htmlData);
+
+    Filter(dom, dom.begin());
+
+    if (settings.DebugOutput) {
+        DumpTree(dom, *settings.DebugOutput);
+        *settings.DebugOutput << "\n\n";
+    }
+
+    TElements elements;
+
+    MakeElements(elements, dom);
+    TrimHeaderElements(elements);
+
+    if (settings.DebugOutput) {
+        DumpElements(elements, *settings.DebugOutput);
+        *settings.DebugOutput << "\n\n";
+    }
+
+    vector<TContentBlock> blocks;
+    MakeBlocks(blocks, elements);
+
+    if (settings.DebugOutput) {
+        DumpBlocks(blocks, *settings.DebugOutput);
+    }
 
     assert(!blocks.empty() && "no blocks returned");
     return blocks;
 }
 
-TBlock ExhausteMainContent(const string& htmlData,
-                           bool decode,
-                           const string& encoding)
-{
-    return ExhausteContent(htmlData, decode, encoding)[0];
-}
+} // NExhauster

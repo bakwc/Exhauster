@@ -5,7 +5,12 @@
 #include <string>
 #include <iostream>
 
+#include <contrib/htmlcxx/html/ParserDom.h>
+
 using namespace std;
+using namespace htmlcxx;
+
+namespace NExhauster {
 
 enum EType {
     TP_Header = 0x01,
@@ -21,7 +26,7 @@ struct TElement {
     unsigned char Type;
 };
 
-struct TBlock {
+struct TContentBlock {
     string Title;
     string Text;
     string Snippet;
@@ -29,6 +34,18 @@ struct TBlock {
     string Path;
 };
 
+struct TSettings {
+    TSettings();
+    bool Decode; // tries to recode
+    string Charset; // optional - if encoding detection fails
+                    // will use this charset
+    ostream* DebugOutput;
+};
+
 typedef list<TElement> TElements;
 
-void DumpElements(const TElements& elements, ostream &out);
+void DumpTree(const tree<HTML::Node>& dom, ostream& out);
+void DumpElements(const TElements& elements, ostream& out);
+void DumpBlocks(const vector<TContentBlock>& blocks, ostream& out);
+
+} // NExhauster

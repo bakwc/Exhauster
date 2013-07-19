@@ -5,6 +5,7 @@ link_directories (${PROJECT_BINARY_DIR}/utils
 if(Boost_FOUND)
     add_executable (exhauster main.cpp)
     target_link_libraries(exhauster
+                            htmlcxx
                             utils
                             libexhaust
                             ${Boost_LIBRARIES})

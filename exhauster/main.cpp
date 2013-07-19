@@ -3,12 +3,14 @@
 
 #include <utils/string.h>
 
+#include <libexhaust/exhauster.h>
+
 using namespace std;
 
 int main() {
-    string str = "проверка\n";
-    wstring wtr = UTF8ToWide(str);
-    string str2 = WideToUTF8(wtr);
-    cout << str2;
+    setlocale(LC_CTYPE, "en_US.UTF-8");
+
+    string data = "<html><body>Some regular content is here. Text text text.</body></html>";
+    cout << NExhauster::ExhausteMainContent(data).Text << "\n";
     return 0;
 }

@@ -11,6 +11,10 @@ if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
 endif()
 
+link_directories (${PROJECT_BINARY_DIR}/utils
+                  ${PROJECT_BINARY_DIR}/libexhaust
+                  ${PROJECT_BINARY_DIR}/contrib/htmlcxx/html)
+
 add_subdirectory(utils)
 add_subdirectory(libexhaust)
 add_subdirectory(contrib)

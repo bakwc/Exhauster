@@ -8,15 +8,15 @@
 using namespace std;
 using namespace htmlcxx;
 
+namespace NExhauster {
+
 // public interface
 
-vector<TBlock> ExhausteContent(const string& htmlData,
-                               bool decode = true,
-                               const string& encoding = string());
+TContentBlock ExhausteMainContent(const string& htmlData,
+                           const TSettings& settings = TSettings());
 
-TBlock ExhausteMainContent(const string& htmlData,
-                           bool decode = true,
-                           const string& encoding = string());
+vector<TContentBlock> ExhausteContent(const string& htmlData,
+                               const TSettings& settings = TSettings());
 
 
 // internal functions
@@ -43,3 +43,5 @@ void MakeElements(TElements& elements,
                   unsigned char elementType = TP_Text);
 
 void TrimHeaderElements(TElements& elements);
+
+} // NExhauster
