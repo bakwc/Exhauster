@@ -13,7 +13,7 @@ string WideToUTF8(const wstring& text) {
 
 size_t CalcWordsCount(const string& text) {
     size_t count = 0;
-    wstring wtext = UTF8ToWide(text);
+    wstring wtext = UTF8ToWide(text + " ");
     for (size_t i = 1; i < wtext.size(); i++) {
         if (!iswalpha(wtext[i]) && iswalpha(wtext[i - 1])) {
             count++;
@@ -34,7 +34,6 @@ size_t CalcPunctCount(const string& text) {
 
 bool HasPunct(const string& text) {
     for (size_t i = 0; i < text.size(); i++) {
-        //if (ispunct(text[i])) {
         if (text[i] == '.' ||
                 text[i] == ',' ||
                 text[i] == '?' ||
@@ -51,7 +50,11 @@ string NormalizeText(const string& text, bool hard) {
     wstring current;
     wstring result;
     for (size_t i = 0; i < wtext.size(); i++) {
-        if (iswspace(wtext[i]) || wtext[i] == '<' || wtext[i] == '>') {
+        if (iswspace(wtext[i]) ||
+                wtext[i] == '<' ||
+                wtext[i] == '>' ||
+                (hard && wtext[i] == '.'))
+        {
             wtext[i] = ' ';
         }
         if ((hard && iswalpha(wtext[i])) ||

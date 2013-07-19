@@ -63,7 +63,8 @@ bool ClassFiltered(const string& name) {
         // todo: dehardcode.. or not
         if (name == "twitter-content" || name == "twitter-post" ||
                 name == "copyright" || name == "footer" || name == "time" ||
-                name == "author" || name == "copyrights" || name == "hidden")
+                name == "author" || name == "copyrights" || name == "hidden" ||
+                name == "dablink")
         {
             return true;
         }
