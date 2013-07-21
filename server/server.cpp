@@ -64,6 +64,16 @@ int THttpServer::ProcessRequest(struct mg_connection* conn) {
     if (requestStruct->query_string) {
         request.Query = requestStruct->query_string;
     }
+
+    if (request.Method == "POST") {
+        char post_data[1024];
+        int post_data_len = 0;
+        do {
+            post_data_len = mg_read(conn, post_data, sizeof(post_data));
+            request.PostData += string(post_data, post_data_len);
+        } while (post_data_len > 0);
+    }
+
     if (requestStruct->remote_user) {
         request.User = requestStruct->remote_user;
     }

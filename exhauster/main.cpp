@@ -18,9 +18,10 @@ using namespace NHttpServer;
 class TServer {
 public:
     TServer()
-        : Server(NHttpServer::TSettings(8686))
+        : Server(NHttpServer::TSettings(8687))
     {
         Server.HandleAction("/exhause", std::bind(&TServer::ProcessExhauseRequest, this, _1));
+        Server.HandleAction("/exhause/post", std::bind(&TServer::ProcessExhausePostRequest, this, _1));
     }
     optional<TResponse> ProcessExhauseRequest(const TRequest& request) {
         TResponse response;
@@ -36,6 +37,16 @@ public:
             return response;
         }
         response.Data = NExhauster::ExhausteMainContent(*data).Text;
+        return response;
+    }
+    optional<TResponse> ProcessExhausePostRequest(const TRequest& request) {
+        TResponse response;
+        response.ContentType("text/plain");
+        if (request.Method != "POST") {
+            response.Data = "error: no post data detected";
+            return response;
+        }
+        response.Data = NExhauster::ExhausteMainContent(request.PostData).Text;
         return response;
     }
 private:

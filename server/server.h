@@ -31,6 +31,7 @@ struct TRequest {
     string URI;
     string HttpVersion;
     string Query;
+    string PostData;
     string User;
     long IP;
     unsigned short Port;
