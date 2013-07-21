@@ -2,6 +2,7 @@
 
 #include <utils/string.h>
 #include <libexhaust/exhauster.h>
+#include <server/server.h>
 
 #include <gtest/gtest.h>
 
@@ -26,6 +27,13 @@ TEST(utils, ImproveText) {
               ImproveText("Какой-то простой    текст с\nкривым форматированием\n."));
     ASSERT_EQ("Ставим точку в конце предложения.",
               ImproveText("Ставим точку в конце предложения"));
+}
+
+TEST(server, TRequestGetParam) {
+    NHttpServer::TRequest request;
+    request.Query = "id=81&value=test";
+    ASSERT_EQ("81", *request.GetParam("id"));
+    ASSERT_EQ("test", *request.GetParam("value"));
 }
 
 int main(int argc, char **argv) {

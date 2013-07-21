@@ -1,34 +1,52 @@
 #include <iostream>
 #include <string>
-
-#include <utils/string.h>
 #include <fstream>
+#include <thread>
+#include <chrono>
+#include <functional>
 
+#include <curl/curl.h>
+#include <utils/string.h>
 #include <libexhaust/exhauster.h>
-
-#include "fetcher.hpp"
+#include <server/server.h>
+#include <fetcher/fetcher.h>
 
 using namespace std;
+using namespace placeholders;
+using namespace NHttpServer;
+
+class TServer {
+public:
+    TServer()
+        : Server(NHttpServer::TSettings(8686))
+    {
+        Server.HandleAction("/exhause", std::bind(&TServer::ProcessExhauseRequest, this, _1));
+    }
+    optional<TResponse> ProcessExhauseRequest(const TRequest& request) {
+        TResponse response;
+        response.ContentType("text/plain");
+        optional<string> url = request.GetParam("url");
+        if (!url) {
+            response.Data = "error: missing url";
+            return response;
+        }
+        optional<string> data = NHttpFetcher::FetchUrl(*url);
+        if (!data) {
+            response.Data = "error: failed to fetch url";
+            return response;
+        }
+        response.Data = NExhauster::ExhausteMainContent(*data).Text;
+        return response;
+    }
+private:
+    THttpServer Server;
+};
 
 int main(int argc, char** argv) {
-    if (argc < 2) {
-        return 42;
-    }
-
     setlocale(LC_CTYPE, "en_US.UTF-8");
 
-    //ifstream in(argv[1]);
-    //string data((istreambuf_iterator<char>(in)), (istreambuf_iterator<char>()));
+    TServer server;
+    this_thread::sleep_for(chrono::system_clock::duration::max());
 
-    string url = argv[1];
-    string data = htf::GetUrl(url);
-
-    //string data = "<html><body>Some regular content is here. Text text text.</body></html>";
-
-    NExhauster::TSettings settings;
-    //settings.DebugOutput = &cout;
-    //cout << "\n\n";
-
-    cout << NExhauster::ExhausteMainContent(data, settings).Text << "\n";
     return 0;
 }

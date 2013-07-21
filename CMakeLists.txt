@@ -10,17 +10,24 @@ set(Boost_USE_STATIC_RUNTIME OFF)
 find_package(Boost 1.48.0 COMPONENTS locale)
 find_package(GTest REQUIRED)
 
+FIND_PATH(CURL_INCLUDE_DIR NAMES curl/curl.h)
+FIND_LIBRARY(CURL_LIBRARY NAMES curl)
+
 include_directories (${PROJECT_SOURCE_DIR})
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${GTEST_INCLUDE_DIRS})
+include_directories(${CURL_INCLUDE_DIR})
 
 link_directories (${PROJECT_BINARY_DIR}/utils
                   ${PROJECT_BINARY_DIR}/libexhaust
+                  ${PROJECT_BINARY_DIR}/server
                   ${PROJECT_BINARY_DIR}/contrib/htmlcxx/html
                   ${PROJECT_BINARY_DIR}/contrib/htmlcxx/mongoose)
 
 add_subdirectory(utils)
 add_subdirectory(libexhaust)
+add_subdirectory(server)
+add_subdirectory(fetcher)
 add_subdirectory(contrib)
 add_subdirectory(exhauster)
 add_subdirectory(tests)
