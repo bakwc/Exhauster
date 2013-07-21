@@ -7,11 +7,13 @@ set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
 
-find_package(Boost 1.48.0 COMPONENTS locale)
+find_package(Boost 1.48.0 COMPONENTS locale system filesystem REQUIRED )
 find_package(GTest REQUIRED)
 
 FIND_PATH(CURL_INCLUDE_DIR NAMES curl/curl.h)
 FIND_LIBRARY(CURL_LIBRARY NAMES curl)
+
+add_definitions(-DTEST_DATA_DIR="${PROJECT_SOURCE_DIR}/test_data/")
 
 include_directories (${PROJECT_SOURCE_DIR})
 include_directories(${Boost_INCLUDE_DIRS})

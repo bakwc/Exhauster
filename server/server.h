@@ -50,7 +50,7 @@ struct TResponse {
     THeaders Headers;
 };
 
-typedef function<optional<TResponse>(const TRequest& request)> TRequestHandler;
+typedef std::function<optional<TResponse>(const TRequest& request)> TRequestHandler;
 typedef unordered_map<string, TRequestHandler> TRequestHandlers;
 
 class THttpServer {

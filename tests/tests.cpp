@@ -1,10 +1,13 @@
 // tests.cpp
 
+#include <boost/filesystem/operations.hpp>
+#include <gtest/gtest.h>
+
 #include <utils/string.h>
 #include <libexhaust/exhauster.h>
 #include <server/server.h>
 
-#include <gtest/gtest.h>
+using namespace boost::filesystem3;
 
 TEST(utils, CalcWordsCount) {
     ASSERT_EQ(0, CalcWordsCount(""));
@@ -34,6 +37,36 @@ TEST(server, TRequestGetParam) {
     request.Query = "id=81&value=test";
     ASSERT_EQ("81", *request.GetParam("id"));
     ASSERT_EQ("test", *request.GetParam("value"));
+}
+
+struct TExhaustTestTask {
+    string Name;
+    string HtmlDataFile;
+    string ContentFile;
+};
+
+TEST(libexhaust, TExhaustMainContentFunctional) {
+    vector<TExhaustTestTask> tasks;
+    directory_iterator it(TEST_DATA_DIR);
+    directory_iterator end;
+    while (it != end) {
+        path p = it->path();
+        if (p.extension().string() == ".txt") {
+            TExhaustTestTask task;
+            task.HtmlDataFile = TEST_DATA_DIR + p.stem().string() + ".html";
+            task.ContentFile = TEST_DATA_DIR + p.stem().string() + ".txt";
+            task.Name = p.stem().string();
+            tasks.push_back(task);
+        }
+        it++;
+    }
+
+    for (size_t i = 0; i < tasks.size(); i++) {
+        string htmlData = LoadFile(tasks[i].HtmlDataFile);
+        string content = LoadFile(tasks[i].ContentFile);
+        cout << "             checking '" << tasks[i].Name << "'\n";
+        ASSERT_EQ(content, NExhauster::ExhausteMainContent(htmlData).Text);
+    }
 }
 
 int main(int argc, char **argv) {

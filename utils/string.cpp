@@ -1,7 +1,15 @@
-#include "string.h"
-
+#include <fstream>
 #include <boost/algorithm/string.hpp>
 #include <boost/locale.hpp>
+
+#include "string.h"
+
+string LoadFile(const string& fileName) {
+    std::ifstream ifs(fileName);
+    std::string content((std::istreambuf_iterator<char>(ifs)),
+                        (std::istreambuf_iterator<char>()));
+    return content;
+}
 
 wstring UTF8ToWide(const string& text) {
     return boost::locale::conv::to_utf<wchar_t>(text, "UTF-8");

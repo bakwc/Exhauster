@@ -3,6 +3,7 @@
 
 using namespace std;
 
+string LoadFile(const string& fileName);
 wstring UTF8ToWide(const string& text);
 string WideToUTF8(const wstring& text);
 size_t CalcWordsCount(const string& text);
