@@ -1,4 +1,5 @@
 #include <fstream>
+#include <memory>
 #include <boost/algorithm/string.hpp>
 #include <boost/locale.hpp>
 #include <iconv.h>
@@ -20,7 +21,7 @@ string WideToUTF8(const wstring& text) {
     return boost::locale::conv::from_utf<>(text, "UTF-8");
 }
 
-string RecodeCharset(string text, const string& from, const string& to) {
+string RecodeText(string text, const string& from, const string& to) {
     iconv_t cnv = iconv_open(to.c_str(), from.c_str());
     if (cnv == (iconv_t)-1) {
         iconv_close(cnv);
@@ -147,4 +148,11 @@ string ImproveText(const string& text) {
         result += '.';
     }
     return WideToUTF8(result);
+}
+
+string DecodeHtmlEntities(const string& text) {
+    unique_ptr<char> buff(new char[text.size() + 1]);
+    size_t size = decode_html_entities_utf8(buff.get(), text.c_str());
+    return string(buff.get(), size);
+    return string();
 }

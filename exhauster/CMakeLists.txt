@@ -6,4 +6,5 @@ target_link_libraries(exhauster
                         libexhaust
                         server
                         fetcher
+                        libstuff
                         ${Boost_LIBRARIES})

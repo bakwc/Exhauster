@@ -290,7 +290,7 @@ bool GetCharset(tree<HTML::Node>::iterator it, string& charset) {
             }
         }
 
-        if (tag != "body" && tag != "html" && !tag.empty()) {
+        if (tag != "html" && !tag.empty()) {
             return false;
         }
 
@@ -303,10 +303,32 @@ bool GetCharset(tree<HTML::Node>::iterator it, string& charset) {
     return false;
 }
 
+bool GetTitle(tree<HTML::Node>::iterator it, string& title) {
+    HTML::Node& node = *it;
+    if (node.isTag()) {
+        string tag = GetTag(it);
+        if (tag == "title") {
+            if (it.number_of_children() == 1) {
+                title = it.begin()->text();
+                return true;
+            }
+        } else if (tag != "html" && !tag.empty()) {
+            return false;
+        }
+
+        for (tree<HTML::Node>::iterator jt = it.begin(); jt != it.end(); jt++) {
+            if (GetTitle(jt, title)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 void DecodeTree(tree<HTML::Node>& dom, string charsetFrom) {
     for (tree<HTML::Node>::iterator it = dom.begin(); it != dom.end(); it++) {
         HTML::Node& node = *it;
-        string decodedText = RecodeCharset(node.text(), charsetFrom, "UTF-8");
+        string decodedText = RecodeText(node.text(), charsetFrom, "UTF-8");
         if (!decodedText.empty()) {
             node.text(decodedText);
         }
@@ -429,7 +451,10 @@ void TrimHeaderElements(TElements& elements) {
     }
 }
 
-void MakeBlocks(vector<TContentBlock>& blocks, const TElements& elements) {
+void MakeBlocks(vector<TContentBlock>& blocks,
+                const TElements& elements,
+                string title)
+{
     TContentBlock current;
     if (elements.empty()) {
         blocks.push_back(current);
@@ -439,7 +464,11 @@ void MakeBlocks(vector<TContentBlock>& blocks, const TElements& elements) {
     current.Path = prevPath;
     for (TElements::const_iterator it = elements.begin(); it != elements.end(); it++) {
         string currentText = it->Text;
-        currentText = HTML::decode_entities(currentText);
+        if (title.find(currentText) != string::npos) {
+            title = currentText;
+            continue;
+        }
+        currentText = DecodeHtmlEntities(currentText);
 
         float distance = numeric_limits<float>::max();
         TElements::const_iterator jt = it;
@@ -475,6 +504,24 @@ void MakeBlocks(vector<TContentBlock>& blocks, const TElements& elements) {
         current.Text = ImproveText(current.Text);
         blocks.push_back(current);
     }
+
+    if (blocks.empty()) {
+        blocks.push_back(TContentBlock());
+    }
+
+    if (blocks[0].Title.empty() && !title.empty()) {
+        blocks[0].Title = title;
+    }
+}
+
+void MergeBlocks(vector<TContentBlock>& blocks) {
+    if (blocks.size() < 2) {
+        return;
+    }
+    if (blocks[1].Text.size() > blocks[0].Text.size() * 2) {
+        blocks[0].Text += " " + blocks[1].Text;
+        blocks.erase(blocks.begin() + 1);
+    }
 }
 
 TContentBlock ExhausteMainContent(const string& htmlData,
@@ -491,11 +538,18 @@ vector<TContentBlock> ExhausteContent(const string& htmlData,
     tree<HTML::Node> dom = parser.parseTree(htmlData);
 
     string charset = settings.Charset;
+    string title;
+
     GetCharset(dom.begin(), charset);
+    GetTitle(dom.begin(), title);
 
     Filter(dom, dom.begin());
     if (charset != "utf8" && charset != "utf-8") {
         DecodeTree(dom, charset);
+        string newTitle = RecodeText(title, charset, "UTF-8");
+        if (!newTitle.empty()) {
+            title = newTitle;
+        }
     }
 
     if (settings.DebugOutput) {
@@ -514,7 +568,8 @@ vector<TContentBlock> ExhausteContent(const string& htmlData,
     }
 
     vector<TContentBlock> blocks;
-    MakeBlocks(blocks, elements);
+    MakeBlocks(blocks, elements, title);
+    MergeBlocks(blocks);
 
     if (settings.DebugOutput) {
         DumpBlocks(blocks, *settings.DebugOutput);

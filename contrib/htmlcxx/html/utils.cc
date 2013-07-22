@@ -240,6 +240,7 @@ namespace htmlcxx {
 			{ "yuml", 255 },
 			/* 100 */
             { "mdash", '-' },
+            { "rsquo", '\'' },
 
 			{ NULL, 0 },
 

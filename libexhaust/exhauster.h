@@ -34,6 +34,8 @@ bool HasInterestingContent(tree<HTML::Node>::iterator it,
 
 bool Filter(tree<HTML::Node>& dom, tree<HTML::Node>::iterator it);
 bool GetCharset(tree<HTML::Node>::iterator it, string& charset);
+bool GetTitle(tree<HTML::Node>::iterator it, string& title);
+
 void DecodeTree(tree<HTML::Node>& dom, string charsetFrom);
 
 void AddDistance(const string& path, size_t from, float& distance);
@@ -49,6 +51,8 @@ void MakeElements(TElements& elements,
 
 void TrimHeaderElements(TElements& elements);
 
-void MakeBlocks(vector<TContentBlock>& blocks, const TElements& elements);
+void MakeBlocks(vector<TContentBlock>& blocks,
+                const TElements& elements,
+                string title);
 
 } // NExhauster

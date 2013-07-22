@@ -29,12 +29,13 @@ link_directories (${PROJECT_BINARY_DIR}/utils
                   ${PROJECT_BINARY_DIR}/libexhaust
                   ${PROJECT_BINARY_DIR}/server
                   ${PROJECT_BINARY_DIR}/contrib/htmlcxx/html
-                  ${PROJECT_BINARY_DIR}/contrib/htmlcxx/mongoose)
+                  ${PROJECT_BINARY_DIR}/contrib/mongoose
+                  ${PROJECT_BINARY_DIR}/contrib/stuff)
 
+add_subdirectory(contrib)
 add_subdirectory(utils)
 add_subdirectory(libexhaust)
 add_subdirectory(server)
 add_subdirectory(fetcher)
-add_subdirectory(contrib)
 add_subdirectory(exhauster)
 add_subdirectory(tests)

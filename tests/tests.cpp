@@ -32,6 +32,10 @@ TEST(utils, ImproveText) {
               ImproveText("Ставим точку в конце предложения"));
 }
 
+TEST(utils, DecodeHtmlEntities) {
+    ASSERT_EQ("hello world", DecodeHtmlEntities("hello&nbsp;world"));
+}
+
 TEST(server, TRequestGetParam) {
     NHttpServer::TRequest request;
     request.Query = "id=81&value=test";
