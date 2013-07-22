@@ -182,7 +182,8 @@ bool Filter(tree<HTML::Node>& dom, tree<HTML::Node>::iterator it) {
                 tag == "iframe" || tag == "frame" || tag == "img" ||
                 tag == "style" || tag == "textarea" || tag == "footer" ||
                 tag == "aside" || tag == "select" || tag == "option" ||
-                tag == "noscript") // "ul" should stay
+                tag == "noscript" || tag == "title" || tag == "meta" ||
+                tag == "link") // "ul" should stay
         {
             return true;
         }
@@ -191,9 +192,11 @@ bool Filter(tree<HTML::Node>& dom, tree<HTML::Node>::iterator it) {
             return (tag != "img");
         }
 
-        node.parseAttributes();
-        if (node.attribute("onclick").first) {
-            return true;
+        if (!node.text().empty()) {
+            node.parseAttributes();
+            if (node.attribute("onclick").first) {
+                return true;
+            }
         }
 
         if (ClassFiltered(node.attribute("class").second) ||
@@ -253,6 +256,62 @@ bool Filter(tree<HTML::Node>& dom, tree<HTML::Node>::iterator it) {
     }
 }
 
+bool GetCharset(tree<HTML::Node>::iterator it, string& charset) {
+    HTML::Node& node = *it;
+    if (node.isTag()) {
+        string tag = GetTag(it);
+        if (tag == "meta") {
+            node.parseAttributes();
+            map<string, string> attributes = node.attributes();
+            map<string, string>::iterator it;
+            bool hasContentType = false;
+            string contentType;
+            for (it = attributes.begin(); it != attributes.end(); it++) {
+                string key = it->first;
+                string value = it->second;
+                boost::algorithm::to_lower(key);
+                boost::algorithm::to_lower(value);
+                if (key == "http-equiv" && value == "content-type") {
+                    hasContentType = true;
+                }
+                if (key == "content") {
+                    contentType = value;
+                }
+            }
+            if (hasContentType) {
+                vector<string> params;
+                boost::algorithm::split(params, contentType, boost::algorithm::is_any_of("; "));
+                for (size_t i = 0; i < params.size(); i++) {
+                    if (boost::algorithm::starts_with(params[i], "charset=")) {
+                        charset = params[i].substr(8);
+                        return true;
+                    }
+                }
+            }
+        }
+
+        if (tag != "body" && tag != "html" && !tag.empty()) {
+            return false;
+        }
+
+        for (tree<HTML::Node>::iterator jt = it.begin(); jt != it.end(); jt++) {
+            if (GetCharset(jt, charset)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+void DecodeTree(tree<HTML::Node>& dom, string charsetFrom) {
+    for (tree<HTML::Node>::iterator it = dom.begin(); it != dom.end(); it++) {
+        HTML::Node& node = *it;
+        string decodedText = RecodeCharset(node.text(), charsetFrom, "UTF-8");
+        if (!decodedText.empty()) {
+            node.text(decodedText);
+        }
+    }
+}
 
 ///  ---- paths ----
 
@@ -372,6 +431,10 @@ void TrimHeaderElements(TElements& elements) {
 
 void MakeBlocks(vector<TContentBlock>& blocks, const TElements& elements) {
     TContentBlock current;
+    if (elements.empty()) {
+        blocks.push_back(current);
+        return;
+    }
     string prevPath = elements.begin()->Path;
     current.Path = prevPath;
     for (TElements::const_iterator it = elements.begin(); it != elements.end(); it++) {
@@ -427,7 +490,13 @@ vector<TContentBlock> ExhausteContent(const string& htmlData,
     HTML::ParserDom parser;
     tree<HTML::Node> dom = parser.parseTree(htmlData);
 
+    string charset = settings.Charset;
+    GetCharset(dom.begin(), charset);
+
     Filter(dom, dom.begin());
+    if (charset != "utf8" && charset != "utf-8") {
+        DecodeTree(dom, charset);
+    }
 
     if (settings.DebugOutput) {
         DumpTree(dom, *settings.DebugOutput);

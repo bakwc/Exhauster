@@ -1,6 +1,7 @@
 #include <fstream>
 #include <boost/algorithm/string.hpp>
 #include <boost/locale.hpp>
+#include <iconv.h>
 
 #include "string.h"
 
@@ -17,6 +18,36 @@ wstring UTF8ToWide(const string& text) {
 
 string WideToUTF8(const wstring& text) {
     return boost::locale::conv::from_utf<>(text, "UTF-8");
+}
+
+string RecodeCharset(string text, const string& from, const string& to) {
+    iconv_t cnv = iconv_open(to.c_str(), from.c_str());
+    if (cnv == (iconv_t)-1) {
+        iconv_close(cnv);
+        return "";
+    }
+
+    char* outbuf;
+    if ((outbuf = (char*)malloc(text.length() * 2 + 1)) == NULL) {
+        iconv_close(cnv);
+        return "";
+    }
+
+    char* ip = (char*)text.c_str();
+    char* op = outbuf;
+    size_t icount = text.length();
+    size_t ocount = text.length() * 2;
+
+    if (iconv(cnv, &ip, &icount, &op, &ocount) != (size_t)-1) {
+        outbuf[text.length() * 2 - ocount] = '\0';
+        text = outbuf;
+    } else {
+        text = "";
+    }
+
+    free(outbuf);
+    iconv_close(cnv);
+    return text;
 }
 
 size_t CalcWordsCount(const string& text) {

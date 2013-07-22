@@ -36,7 +36,9 @@ public:
             response.Data = "error: failed to fetch url";
             return response;
         }
-        response.Data = NExhauster::ExhausteMainContent(*data).Text;
+        NExhauster::TSettings settings;
+        settings.DebugOutput = &cerr;
+        response.Data = NExhauster::ExhausteMainContent(*data, settings).Text;
         return response;
     }
     optional<TResponse> ProcessExhausePostRequest(const TRequest& request) {

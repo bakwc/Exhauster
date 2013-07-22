@@ -32,6 +32,10 @@ bool HasInterestingContent(tree<HTML::Node>::iterator it,
                            bool hard = true,
                            size_t* words = NULL);
 
+bool Filter(tree<HTML::Node>& dom, tree<HTML::Node>::iterator it);
+bool GetCharset(tree<HTML::Node>::iterator it, string& charset);
+void DecodeTree(tree<HTML::Node>& dom, string charsetFrom);
+
 void AddDistance(const string& path, size_t from, float& distance);
 float GetPathDistance(const string& path1, const string& path2);
 string GetCommonPath(const string& path1, const string& path2);

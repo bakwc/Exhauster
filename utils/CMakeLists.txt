@@ -1,3 +1,4 @@
 
 add_library (utils string.cpp)
-target_link_libraries(utils ${Boost_LIBRARIES})
+target_link_libraries(utils ${Boost_LIBRARIES}
+                            ${ICONV_LIBRARY})

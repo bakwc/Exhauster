@@ -7,18 +7,23 @@ set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
 
-find_package(Boost 1.48.0 COMPONENTS locale system filesystem REQUIRED )
+find_package(Boost 1.48.0 COMPONENTS locale system filesystem REQUIRED)
 find_package(GTest REQUIRED)
 
 FIND_PATH(CURL_INCLUDE_DIR NAMES curl/curl.h)
+FIND_PATH(ICONV_INCLUDE_DIR NAMES iconv.h)
+
 FIND_LIBRARY(CURL_LIBRARY NAMES curl)
+FIND_LIBRARY(ICONV_LIBRARY NAMES iconv libiconv libiconv-2 c)
+
 
 add_definitions(-DTEST_DATA_DIR="${PROJECT_SOURCE_DIR}/test_data/")
 
-include_directories (${PROJECT_SOURCE_DIR})
-include_directories(${Boost_INCLUDE_DIRS})
-include_directories(${GTEST_INCLUDE_DIRS})
-include_directories(${CURL_INCLUDE_DIR})
+include_directories(${PROJECT_SOURCE_DIR}
+                    ${Boost_INCLUDE_DIRS}
+                    ${GTEST_INCLUDE_DIRS}
+                    ${CURL_INCLUDE_DIR}
+                    ${ICONV_INCLUDE_DIR})
 
 link_directories (${PROJECT_BINARY_DIR}/utils
                   ${PROJECT_BINARY_DIR}/libexhaust
