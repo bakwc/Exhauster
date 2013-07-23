@@ -24,30 +24,45 @@ bool CanBeDate(const string& word) {
         if (digits == word.size()) {
             return true;
         }
-    }
-    if (word.size() == 8) {
+    } else if (word.size() == 8) {
         return (isdigit(word[0]) && isdigit(word[1]) &&
                         isdigit(word[3]) && isdigit(word[4]) &&
                         isdigit(word[6]) && isdigit(word[7]) &&
-                        (word[2] == '.' || word[2] == ':') &&
-                        (word[5] == '.' || word[5] == ':'));
+                isdatedelim(word[2]) && isdatedelim(word[5]));
+    } else if ((word.size() == 10 && CalcDigitCount(word) == 8) ||
+               word.size() == 5 && CalcDigitCount(word) == 4)
+    {
+        return true;
     }
     return false;
 }
 
 // filter element by text (currently only dates filtered)
 bool TextFiltered(const string& text) {
-    string normalizedText = NormalizeText(text, false);
+    string normalizedText = NormalizeText(DecodeHtmlEntities(text), false);
     vector<string> words;
     boost::algorithm::split(words, normalizedText, boost::algorithm::is_any_of(" "));
 
+    if (words.size() == 1) {
+        return false;
+    }
+
     size_t dateWords = 0;
+    size_t wordsSize = 0;
+
     for (size_t i = 0; i < words.size(); i++) {
+        if (words[i].size() == 1) {
+            continue;
+        }
+        wordsSize++;
         if (CanBeDate(words[i])) {
             dateWords++;
         }
     }
-    if (dateWords > 0 && dateWords >= words.size() / 2) {
+    if (dateWords > 0 && dateWords >= wordsSize / 2) {
+        return true;
+    }
+    if (dateWords >= 2 && dateWords >= wordsSize / 3) {
         return true;
     }
     return false;
@@ -64,10 +79,19 @@ bool ClassFiltered(const string& name) {
         if (name == "twitter-content" || name == "twitter-post" ||
                 name == "copyright" || name == "footer" || name == "time" ||
                 name == "author" || name == "copyrights" || name == "hidden" ||
-                name == "dablink")
+                name == "hide" || name == "dablink" || name == "comment" ||
+                name == "comments")
         {
             return true;
         }
+    }
+    return false;
+}
+
+// filter dom tree element by `style`
+bool StyleFiltered(const string& style) {
+    if (style.find("display:none") != string::npos) {
+        return true;
     }
     return false;
 }
@@ -129,7 +153,8 @@ bool HasInterestingContent(tree<HTML::Node>::iterator it,
             *words += wordsCnt;
         }
         if (hard) {
-            return wordsCnt >= wordsThreshold && HasPunct(text);
+            return (wordsCnt >= wordsThreshold && HasPunct(text)) ||
+                    wordsCnt >= 2 && parentTag == "b";
         } else {
             return !TextFiltered(text) && (wordsCnt >= 1 || punctsCnt >= 1);
             return true;
@@ -144,27 +169,6 @@ bool HasInterestingContent(tree<HTML::Node>::iterator it,
     }
 
     return result;
-}
-
-// check if element's tag is `parent` and it has child with tag `child`
-bool CheckPair(const string& parent,
-                const string& child,
-                const string& tag,
-                tree<HTML::Node>::iterator it)
-{
-    if (tag == parent) {
-        for (tree<HTML::Node>::iterator jt = it.begin(); jt != it.end(); jt++) {
-            if (GetTag(jt) != child) {
-                return false;
-            }
-            if (HasInterestingContent(jt)) {
-                return false;
-            }
-            jt.skip_children();
-        }
-        return true;
-    }
-    return false;
 }
 
 /** @brief filters element and sub-elements;
@@ -200,7 +204,8 @@ bool Filter(tree<HTML::Node>& dom, tree<HTML::Node>::iterator it) {
         }
 
         if (ClassFiltered(node.attribute("class").second) ||
-            ClassFiltered(node.attribute("id").second))
+            ClassFiltered(node.attribute("id").second) ||
+            StyleFiltered(node.attribute("style").second))
         {
              return true;
         }
@@ -218,16 +223,6 @@ bool Filter(tree<HTML::Node>& dom, tree<HTML::Node>::iterator it) {
         }
         if (result) {
             return true;
-        }
-
-        // todo: remove if unused
-        if (it.number_of_children() > 1) {
-            result = false;
-            result |= CheckPair("div", "div", tag, it);
-            //result |= check_pair("ul", "li", tag, it);
-            if (result) {
-                return true;
-            }
         }
 
         if ((tag == "div" || tag == "table" ||
@@ -452,7 +447,7 @@ void TrimHeaderElements(TElements& elements) {
 }
 
 void MakeBlocks(vector<TContentBlock>& blocks,
-                const TElements& elements,
+                TElements& elements,
                 string title)
 {
     TContentBlock current;
@@ -462,11 +457,13 @@ void MakeBlocks(vector<TContentBlock>& blocks,
     }
     string prevPath = elements.begin()->Path;
     current.Path = prevPath;
-    for (TElements::const_iterator it = elements.begin(); it != elements.end(); it++) {
+    for (TElements::iterator it = elements.begin(); it != elements.end(); it++) {
+        bool skip = false;
         string currentText = it->Text;
-        if (title.find(currentText) != string::npos) {
-            title = currentText;
-            continue;
+        if (CalcWordsCount(currentText) > 2 &&
+                title.find(currentText) != string::npos)
+        {
+            it->Type |= TP_Header;
         }
         currentText = DecodeHtmlEntities(currentText);
 
@@ -481,7 +478,18 @@ void MakeBlocks(vector<TContentBlock>& blocks,
             currentText = ImproveText(currentText);
         }
 
-        if (it->Type & TP_Header || GetPathDistance(prevPath, it->Path) > 5) {
+        bool makeNewBlock = false;
+        makeNewBlock |= GetPathDistance(prevPath, it->Path) >= 5;
+
+        makeNewBlock |= (it->Type & TP_Header &&
+                        jt != elements.end() &&
+                        jt->Path != prevPath);
+
+        if (it->Type & TP_Header && !makeNewBlock) {
+            current.Repeated = true;
+        }
+
+        if (makeNewBlock) {
             if (CalcWordsCount(current.Text) > 6) {
                 current.Text = ImproveText(current.Text);
                 blocks.push_back(current);
@@ -493,10 +501,24 @@ void MakeBlocks(vector<TContentBlock>& blocks,
                 current.Title = currentText;
             }
         }
-        if ((it->Type & TP_Text) && !(it->Type & TP_Header)) {
+
+        if (current.Text.empty()) {
+            // skips links at the begining of block
+            if (it->Type & TP_Link) {
+                skip = true;
+            }
+        }
+
+        if ((it->Type & TP_Text) &&
+                (!makeNewBlock || !(it->Type & TP_Header)) &&
+                !skip)
+        {
             current.Text += currentText + " "; // todo: add dot if required
             current.Path = GetCommonPath(current.Path, it->Path);
             prevPath = it->Path;
+        }
+        if (it->Type & TP_Link) {
+            current.Links.push_back(currentText);
         }
     }
 
@@ -508,26 +530,74 @@ void MakeBlocks(vector<TContentBlock>& blocks,
     if (blocks.empty()) {
         blocks.push_back(TContentBlock());
     }
-
-    if (blocks[0].Title.empty() && !title.empty()) {
-        blocks[0].Title = title;
-    }
 }
 
-void MergeBlocks(vector<TContentBlock>& blocks) {
-    if (blocks.size() < 2) {
-        return;
+void PrepareBlocks(vector<TContentBlock>& blocks, const string& title) {
+    size_t mainBlock = 0;
+    if (blocks.size() >= 2) {
+        // Если второй блок - больше чем первый, то
+        // либо клеим первый блок ко второму,
+        // либо вообще удаляем первый блок
+        if (blocks[1].Text.size() > blocks[0].Text.size() * 2) {
+            if (CalcWordsCount(blocks[0].Text) > 6 & blocks[0].Links.empty()) {
+                blocks[0].Text += " " + blocks[1].Text;
+                blocks[1].Type = BT_Removed;
+            } else {
+                blocks[0].Type = BT_Removed;
+                mainBlock = 1;
+            }
+        }
+
+        // пропускаем первые несколько блоков с одинаковым path
+        // и берём следующий после них, в случае если у него много
+        // контента
+        if (blocks[0].Path == blocks[1].Path) {
+            size_t c = 1;
+            while (c < blocks.size() &&
+                   blocks[c].Path == blocks[c - 1].Path)
+            {
+                c++;
+            }
+            if (c != blocks.size() &&
+                    blocks[c].Type != BT_Removed &&
+                    blocks[c].Text.size() > blocks[mainBlock].Text.size() * 2)
+            {
+                mainBlock = c;
+            }
+        }
+
+        // Если заголовок второго блока совпадает с заголовком страницы
+        // то считаем его основным контентом
+        if (mainBlock == 0 &&
+                blocks[1].Type != BT_Removed)// &&
+                //!blocks[1].Repeated)
+        {
+            if (!blocks[1].Title.empty() &&
+                    !title.empty() &&
+                    (blocks[1].Title.find(title) != string::npos ||
+                    title.find(blocks[1].Title) != string::npos))
+            {
+                mainBlock = 1;
+                blocks[1].Type = BT_MainContent;
+                blocks[0].Type = BT_AdditionalContent;
+            }
+        }
     }
-    if (blocks[1].Text.size() > blocks[0].Text.size() * 2) {
-        blocks[0].Text += " " + blocks[1].Text;
-        blocks.erase(blocks.begin() + 1);
+    blocks[mainBlock].Type = BT_MainContent;
+    if (blocks[mainBlock].Title.empty()) {
+        blocks[mainBlock].Title = title;
     }
 }
 
 TContentBlock ExhausteMainContent(const string& htmlData,
                            const TSettings& settings)
 {
-    return ExhausteContent(htmlData, settings)[0];
+    vector<TContentBlock> blocks = ExhausteContent(htmlData, settings);
+    for (size_t i = 0; i < blocks.size(); i++) {
+        if (blocks[i].Type == BT_MainContent) {
+            return blocks[i];
+        }
+    }
 }
 
 
@@ -569,7 +639,12 @@ vector<TContentBlock> ExhausteContent(const string& htmlData,
 
     vector<TContentBlock> blocks;
     MakeBlocks(blocks, elements, title);
-    MergeBlocks(blocks);
+
+    if (settings.DebugOutput) {
+        DumpBlocks(blocks, *settings.DebugOutput);
+    }
+
+    PrepareBlocks(blocks, title);
 
     if (settings.DebugOutput) {
         DumpBlocks(blocks, *settings.DebugOutput);

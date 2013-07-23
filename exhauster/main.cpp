@@ -31,7 +31,7 @@ public:
             response.Data = "error: missing url";
             return response;
         }
-        optional<string> data = NHttpFetcher::FetchUrl(*url);
+        optional<string> data = NHttpFetcher::FetchUrl(*url, chrono::seconds(30));
         if (!data) {
             response.Data = "error: failed to fetch url";
             return response;

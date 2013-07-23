@@ -51,11 +51,32 @@ string RecodeText(string text, const string& from, const string& to) {
     return text;
 }
 
+bool isdatedelim(char c) {
+    return c == '.' || c == ':' || c == '\\' || c == '/';
+}
+
+bool iswordsymbol(wchar_t symbol) {
+    return iswalpha(symbol) || iswdigit(symbol) || isdatedelim(symbol);
+}
+
 size_t CalcWordsCount(const string& text) {
     size_t count = 0;
     wstring wtext = UTF8ToWide(text + " ");
     for (size_t i = 1; i < wtext.size(); i++) {
-        if (!iswalpha(wtext[i]) && iswalpha(wtext[i - 1])) {
+        if (!iswordsymbol(wtext[i]) &&
+                iswordsymbol(wtext[i - 1]) && (
+                    i == 1 || iswordsymbol(wtext[i - 2])))
+        {
+            count++;
+        }
+    }
+    return count;
+}
+
+size_t CalcDigitCount(const string& text) {
+    size_t count = 0;
+    for (size_t i = 0; i < text.size(); i++) {
+        if (isdigit(text[i])) {
             count++;
         }
     }
@@ -101,7 +122,9 @@ string NormalizeText(const string& text, bool hard) {
                 (!hard && (iswalpha(wtext[i]) ||
                            iswdigit(wtext[i]) ||
                            wtext[i] == '.' ||
-                           wtext[i] == ':')))
+                           wtext[i] == ':' ||
+                           wtext[i] == '/' ||
+                           wtext[i] == '\\')))
         {
             current += towlower(wtext[i]);
         }

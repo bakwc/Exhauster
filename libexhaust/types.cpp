@@ -59,4 +59,10 @@ void DumpBlocks(const vector<TContentBlock>& blocks, ostream& out) {
     }
 }
 
+TContentBlock::TContentBlock()
+    : Type(BT_AdditionalContent)
+    , Repeated(false)
+{
+}
+
 } // NExhauster

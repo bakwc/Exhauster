@@ -26,12 +26,21 @@ struct TElement {
     unsigned char Type;
 };
 
+enum EBlockType {
+    BT_MainContent,
+    BT_AdditionalContent,
+    BT_Removed
+};
+
 struct TContentBlock {
+    TContentBlock();
     string Title;
     string Text;
     string Snippet;
-    vector<string> Urls;
+    vector<string> Links;
     string Path;
+    EBlockType Type;
+    bool Repeated; // block has repeated content insied eg. comments, etc.
 };
 
 struct TSettings {

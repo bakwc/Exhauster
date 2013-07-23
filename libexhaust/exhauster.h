@@ -52,7 +52,7 @@ void MakeElements(TElements& elements,
 void TrimHeaderElements(TElements& elements);
 
 void MakeBlocks(vector<TContentBlock>& blocks,
-                const TElements& elements,
+                TElements& elements,
                 string title);
 
 } // NExhauster

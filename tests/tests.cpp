@@ -9,13 +9,16 @@
 
 using namespace boost::filesystem3;
 
-TEST(utils, CalcWordsCount) {
+TEST(utils, CalcWordsCount) {  
     ASSERT_EQ(0, CalcWordsCount(""));
     ASSERT_EQ(0, CalcWordsCount("   \n "));
     ASSERT_EQ(1, CalcWordsCount("    word2 \t"));
     ASSERT_EQ(3, CalcWordsCount("word1 word2 word3"));
     ASSERT_EQ(4, CalcWordsCount("word1;word2;word3 word4"));
     ASSERT_EQ(2, CalcWordsCount("тест кирилицы"));
+    ASSERT_EQ(1, CalcWordsCount("test"));
+    ASSERT_EQ(1, CalcWordsCount("2006"));
+    ASSERT_EQ(3, CalcWordsCount("Tarih : 2012.11.09 17:25:20"));
 }
 
 TEST(utils, NormalizeText) {
