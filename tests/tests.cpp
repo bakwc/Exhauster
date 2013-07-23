@@ -21,6 +21,16 @@ TEST(utils, CalcWordsCount) {
     ASSERT_EQ(3, CalcWordsCount("Tarih : 2012.11.09 17:25:20"));
 }
 
+TEST(utils, CalcSentencesCount) {
+    ASSERT_EQ(0, CalcSentencesCount(""));
+    ASSERT_EQ(1, CalcSentencesCount("word"));
+    ASSERT_EQ(1, CalcSentencesCount("Some word"));
+    ASSERT_EQ(1, CalcSentencesCount("Some real world."));
+    ASSERT_EQ(2, CalcSentencesCount("That it two sentences text. And the second one."));
+    ASSERT_EQ(1, CalcSentencesCount("Some multi-dot sentence..."));
+    ASSERT_EQ(2, CalcSentencesCount("CFR Cluj’u deplasmanda 3-1 mağlup ederek Şampiyonlar Ligi H grubunda iddialı duruma gelen Galatasaray Braga ile kader maçına çıkacak. / Braga Galatasaray maçı tur organizasyonu için geç kalmayın…"));
+}
+
 TEST(utils, NormalizeText) {
     ASSERT_EQ("some text normalization", NormalizeText(" \nSome text\t \"normalization\"!!\n"));
     ASSERT_EQ("нормализация кирилицы тест", NormalizeText("<Нормализация> кирилицы\n\nТЕСТ!"));
@@ -44,6 +54,12 @@ TEST(server, TRequestGetParam) {
     request.Query = "id=81&value=test";
     ASSERT_EQ("81", *request.GetParam("id"));
     ASSERT_EQ("test", *request.GetParam("value"));
+}
+
+TEST(libexhaust, GetPathDistance) {
+    string path1 = "/html/body/div:class=fixed/div:class=inner/div:class=container/div:class=main/div:class=box_outer/article:class=cat_article/div:class=single_article_content;id=article_content/div:id=nrelate_flyout_placeholder/p/";
+    string path2 = "/html/body/div:class=fixed/div:class=inner/div:class=container/div:class=main/div:class=box_outer;id=feature_outer/div:class=Feature_news/div:class=slider_wrap/div:class=slider_items/div:class=slider/div:class=slider_item/div:style=position:relative; overflow:hidden;/div:class=slider_caption/h2/atarget=_blank/";
+    ASSERT_EQ(14.5, NExhauster::GetPathDistance(path1, path2));
 }
 
 struct TExhaustTestTask {

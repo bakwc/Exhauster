@@ -55,6 +55,10 @@ bool isdatedelim(char c) {
     return c == '.' || c == ':' || c == '\\' || c == '/';
 }
 
+bool issentbreak(char c) {
+    return c == '.' || c == '!' || c == '?';
+}
+
 bool iswordsymbol(wchar_t symbol) {
     return iswalpha(symbol) || iswdigit(symbol) || isdatedelim(symbol);
 }
@@ -171,6 +175,22 @@ string ImproveText(const string& text) {
         result += '.';
     }
     return WideToUTF8(result);
+}
+
+size_t CalcSentencesCount(const string& text) {
+    if (text.size() == 0) {
+        return 0;
+    }
+    size_t count = 0;
+    for (size_t i = 1; i < text.size(); i++) {
+        if (issentbreak(text[i]) && !ispunct(text[i - 1])) {
+            count++;
+        }
+    }
+    if (!issentbreak(text[text.size() - 1])) {
+        count++;
+    }
+    return count > 0 ? count : (text.size() > 0 ? 1 : 0);
 }
 
 string DecodeHtmlEntities(const string& text) {

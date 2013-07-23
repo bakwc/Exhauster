@@ -1,12 +1,13 @@
 #pragma once
 #include <string>
-
+#include <boost/optional.hpp>
 #include <contrib/htmlcxx/html/ParserDom.h>
 
 #include "types.h"
 
 using namespace std;
 using namespace htmlcxx;
+using namespace boost;
 
 namespace NExhauster {
 
@@ -32,9 +33,13 @@ bool HasInterestingContent(tree<HTML::Node>::iterator it,
                            bool hard = true,
                            size_t* words = NULL);
 
-bool Filter(tree<HTML::Node>& dom, tree<HTML::Node>::iterator it);
+bool Filter(tree<HTML::Node>& dom,
+            tree<HTML::Node>::iterator it,
+            optional<tree<HTML::Node>::iterator> next);
+
 bool GetCharset(tree<HTML::Node>::iterator it, string& charset);
-bool GetTitle(tree<HTML::Node>::iterator it, string& title);
+void GetTitles(tree<HTML::Node>::iterator it, vector<string>& titles);
+string GetTitle(tree<HTML::Node>::iterator it);
 
 void DecodeTree(tree<HTML::Node>& dom, string charsetFrom);
 
