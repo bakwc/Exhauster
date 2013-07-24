@@ -19,6 +19,7 @@ TEST(utils, CalcWordsCount) {
     ASSERT_EQ(1, CalcWordsCount("test"));
     ASSERT_EQ(1, CalcWordsCount("2006"));
     ASSERT_EQ(3, CalcWordsCount("Tarih : 2012.11.09 17:25:20"));
+    ASSERT_EQ(3, CalcWordsCount("21 FUTBOLCU KATILDI"));
 }
 
 TEST(utils, CalcSentencesCount) {
@@ -62,6 +63,13 @@ TEST(libexhaust, GetPathDistance) {
     ASSERT_EQ(14.5, NExhauster::GetPathDistance(path1, path2));
 }
 
+TEST(libexhaust, TextFiltered) {
+    ASSERT_EQ(true, NExhauster::TextFiltered("Опубліковано: 23 вересня 2008 18:30"));
+    ASSERT_EQ(true, NExhauster::TextFiltered("Bu haber 09/11/2012 16:22 tarihinde eklenmi"));
+
+    ASSERT_NE(true, NExhauster::TextFiltered("Some simple text"));
+}
+
 struct TExhaustTestTask {
     string Name;
     string HtmlDataFile;
@@ -87,7 +95,7 @@ TEST(libexhaust, TExhaustMainContentFunctional) {
     for (size_t i = 0; i < tasks.size(); i++) {
         string htmlData = LoadFile(tasks[i].HtmlDataFile);
         string content = LoadFile(tasks[i].ContentFile);
-        cout << "             checking '" << tasks[i].Name << "'\n";
+        cout << "[    -->   ]  checking '" << tasks[i].Name << "'\n";
         ASSERT_EQ(content, NExhauster::ExhausteMainContent(htmlData).Text);
     }
 }

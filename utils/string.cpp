@@ -174,6 +174,7 @@ string ImproveText(const string& text) {
     if (iswupper(result[0]) && !iswpunct(result[result.size() - 1])) {
         result += '.';
     }
+    boost::algorithm::trim(result);
     return WideToUTF8(result);
 }
 

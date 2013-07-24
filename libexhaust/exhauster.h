@@ -24,7 +24,7 @@ vector<TContentBlock> ExhausteContent(const string& htmlData,
 
 bool CanBeDate(const string& word);
 bool TextFiltered(const string& text);
-bool ClassFiltered(const string& name);
+bool ClassFiltered(string name);
 
 string GetTag(tree<HTML::Node>::iterator it);
 

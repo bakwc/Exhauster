@@ -14,7 +14,7 @@ namespace NExhauster {
 
 // todo: rewrite using regexps... or not
 bool CanBeDate(const string& word) {
-    if (word.size() == 2 || word.size() == 4) {
+    if (word.size() == 4) {
         size_t digits = 0;
         for (size_t i = 0; i < word.size(); i++) {
             if (isdigit(word[i])) {
@@ -59,18 +59,19 @@ bool TextFiltered(const string& text) {
             dateWords++;
         }
     }
-    if (dateWords > 0 && dateWords >= wordsSize / 2) {
+    if (dateWords > 0 && dateWords > wordsSize / 2) {
         return true;
     }
-    if (dateWords >= 2 && dateWords >= wordsSize / 3) {
+    if (dateWords >= 2 && wordsSize > 3 && dateWords >= wordsSize / 3) {
         return true;
     }
     return false;
 }
 
 // filer dom-tree element by `class` or `id` attribute value
-bool ClassFiltered(const string& name) {
+bool ClassFiltered(string name) {
     vector<string> names;
+    boost::algorithm::to_lower(name);
     boost::algorithm::split(names, name, boost::algorithm::is_any_of(" "));
 
     for (size_t i = 0; i < names.size(); i++) {
@@ -84,13 +85,22 @@ bool ClassFiltered(const string& name) {
         {
             return true;
         }
+        if (name.find("slider") != string::npos ||
+                name.find("havadurumu") != string::npos ||
+                name.find("weather") != string::npos ||
+                name.find("popup") != string::npos)
+        {
+            return true;
+        }
     }
     return false;
 }
 
 // filter dom tree element by `style`
 bool StyleFiltered(const string& style) {
-    if (style.find("display:none") != string::npos) {
+    if (style.find("display:none") != string::npos ||
+            style.find("display: none") != string::npos)
+    {
         return true;
     }
     return false;
@@ -128,8 +138,12 @@ bool HasInterestingContent(tree<HTML::Node>::iterator it,
         return false;
     }
 
-    if (tag == "option" || tag == "a" || IsHeader(tag)) {
+    if (tag == "option" || tag == "a") {
         return false;
+    }
+
+    if (IsHeader(tag)) {
+        wordsThreshold = 21;
     }
 
     if (parentTag == "li") {
@@ -153,19 +167,32 @@ bool HasInterestingContent(tree<HTML::Node>::iterator it,
             *words += wordsCnt;
         }
         if (hard) {
-            return (wordsCnt >= wordsThreshold && HasPunct(text)) ||
-                    wordsCnt >= 2 && parentTag == "b";
+            return ((wordsCnt >= wordsThreshold && HasPunct(text)) ||
+                    (wordsCnt >= 2 && parentTag == "b")) &&
+                    !TextFiltered(text);
         } else {
-            return !TextFiltered(text) && (wordsCnt >= 1 || punctsCnt >= 1);
-            return true;
+            return (wordsCnt >= 1 || punctsCnt >= 1);
         }
     }
 
     bool result = false;
     tree<HTML::Node>::iterator jt = it.begin();
+    size_t newWords = 0;
     for (;jt != it.end(); jt++) {
-        result |= HasInterestingContent(jt, tag, hard, words);
+        result |= HasInterestingContent(jt, tag, hard, &newWords);
         jt.skip_children();
+    }
+
+    if (newWords < wordsThreshold) {
+        return false;
+    }
+
+    if (words) {
+        *words += newWords;
+    }
+
+    if (result && IsHeader(tag)) {
+        it->tagName("div");
     }
 
     return result;
@@ -371,6 +398,46 @@ void GetTitles(tree<HTML::Node>::iterator it, vector<string>& titles) {
     }
 }
 
+void GetDescription(tree<HTML::Node>::iterator it, string& description) {
+    HTML::Node& node = *it;
+    if (node.isTag()) {
+        string tag = GetTag(it);
+        if (tag == "meta") {
+            node.parseAttributes();
+            map<string, string> attributes = node.attributes();
+            map<string, string>::iterator it;
+            bool hasDescritpion = false;
+            string content;
+            for (it = attributes.begin(); it != attributes.end(); it++) {
+                string key = it->first;
+                string value = it->second;
+                boost::algorithm::to_lower(key);
+                boost::algorithm::to_lower(value);
+                if ((key == "property" ||
+                     key == "name") &&
+                        (value == "og:description" ||
+                         value == "twitter:description" ||
+                         value == "description"))
+                {
+                    hasDescritpion = true;
+                }
+                if (key == "content") {
+                    content = value;
+                }
+                if (hasDescritpion) {
+                    description = DecodeHtmlEntities(content);
+                }
+            }
+        } else if (tag != "html" && !tag.empty()) {
+            return;
+        }
+
+        for (tree<HTML::Node>::iterator jt = it.begin(); jt != it.end(); jt++) {
+            GetDescription(jt, description);
+        }
+    }
+}
+
 // search for titles in dom tree, select a minimal one
 void GetTitle(tree<HTML::Node>::iterator it, string& title, vector<string>& titles) {
     GetTitles(it, titles);
@@ -534,6 +601,13 @@ void MakeBlocks(vector<TContentBlock>& blocks,
 
         bool skip = false;
         string currentText = it->Text;
+
+        if (TextFiltered(currentText) && (next == elements.end() ||
+                                          next->Path != it->Path))
+        {
+            continue;
+        }
+
         size_t wordsCount = CalcWordsCount(currentText);
         if (wordsCount > 3 && title.find(currentText) != string::npos) {
             it->Type |= TP_Header;
@@ -630,10 +704,30 @@ bool SimmilarTitle(const string& title, const vector<string>& titles) {
 
 void PrepareBlocks(vector<TContentBlock>& blocks,
                    const vector<string>& titles,
-                   const string& mainTitle)
+                   const string& mainTitle,
+                   const string& description)
 {
     size_t mainBlock = 0;
-    if (blocks.size() >= 2) {
+    bool firstBlockGood = false;
+
+    string normalizedDescr = NormalizeText(description);
+    if (description.size() > 10) {
+        for (int i = (int)blocks.size() - 1; i >= 0; i--) {
+            if (NormalizeText(blocks[i].Text).find(
+                        normalizedDescr.substr(normalizedDescr.size() * 0.1,
+                                              normalizedDescr.size() * 0.8))
+                                != string::npos)
+            {
+                blocks[mainBlock].Type = BT_AdditionalContent;
+                mainBlock = i;
+                if (i == 0) {
+                    firstBlockGood = true;
+                }
+            }
+        }
+    }
+
+    if (blocks.size() >= 2 && mainBlock == 0) {
         // Если второй блок - больше чем первый, то
         // либо клеим первый блок ко второму,
         // либо вообще удаляем первый блок
@@ -645,9 +739,11 @@ void PrepareBlocks(vector<TContentBlock>& blocks,
             blocks[0].Type = BT_Removed;
             mainBlock = 1;
         } else if (blocks[1].Text.size() > blocks[0].Text.size() * 2 &&
-                !blocks[1].Repeated)
-        {
-            if (CalcWordsCount(blocks[0].Text) > 6 & blocks[0].Links.empty()) {
+                   (CalcWordsCount(blocks[0].Text) < 50 ||
+                    blocks[0].Links.size() > blocks[1].Links.size())) {
+            if ((CalcWordsCount(blocks[0].Text) > 6 && blocks[0].Links.empty())
+                    || firstBlockGood)
+            {
                 blocks[0].Text += " " + blocks[1].Text;
                 blocks[1].Type = BT_Removed;
             } else {
@@ -687,6 +783,7 @@ void PrepareBlocks(vector<TContentBlock>& blocks,
             }
         }
     }
+
     blocks[mainBlock].Type = BT_MainContent;
     if (blocks[mainBlock].Title.empty()) {
         blocks[mainBlock].Title = mainTitle;
@@ -713,10 +810,12 @@ vector<TContentBlock> ExhausteContent(const string& htmlData,
 
     string charset = settings.Charset;
     string title;   // main title
+    string description; // description, parsed from meta
     vector<string> titles; // all detected titles, including og-meta
 
     GetCharset(dom.begin(), charset);
     GetTitle(dom.begin(), title, titles);
+    GetDescription(dom.begin(), description);
 
     Filter(dom, dom.begin(), optional<tree<HTML::Node>::iterator>());
     if (charset != "utf8" && charset != "utf-8") {
@@ -749,7 +848,7 @@ vector<TContentBlock> ExhausteContent(const string& htmlData,
         DumpBlocks(blocks, *settings.DebugOutput);
     }
 
-    PrepareBlocks(blocks, titles, title);
+    PrepareBlocks(blocks, titles, title, description);
 
     if (settings.DebugOutput) {
         DumpBlocks(blocks, *settings.DebugOutput);
