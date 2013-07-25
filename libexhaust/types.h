@@ -38,6 +38,7 @@ struct TContentBlock {
     string Text;
     string Snippet;
     vector<string> Links;
+    vector<string> Headers;
     string Path;
     EBlockType Type;
     bool Repeated; // block has repeated content insied eg. comments, etc.

@@ -1,3 +1,5 @@
+#include <utils/string.h>
+
 #include "types.h"
 
 namespace NExhauster {
@@ -52,10 +54,13 @@ void DumpElements(const TElements& elements, ostream& out) {
 
 void DumpBlocks(const vector<TContentBlock>& blocks, ostream& out) {
     for (size_t i = 0; i < blocks.size(); i++) {
-        out << "block #" << i << "\n";
-        out << "title: " << blocks[i].Title << "\n";
-        out << "path:  " << blocks[i].Path << "\n";
-        out << "text:  " << blocks[i].Text << "\n";
+        out << "block   #" << i << "\n";
+        out << "title:   " << blocks[i].Title << "\n";
+        out << "links:   " << blocks[i].Links.size() << "\n";
+        out << "headers: " << blocks[i].Headers.size() << "\n";
+        out << "words:   " << CalcWordsCount(blocks[i].Text) << "\n";
+        out << "path:    " << blocks[i].Path << "\n\n";
+        out << "text:    " << blocks[i].Text << "\n";
     }
 }
 

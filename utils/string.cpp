@@ -64,6 +64,9 @@ bool iswordsymbol(wchar_t symbol) {
 }
 
 size_t CalcWordsCount(const string& text) {
+    if (text.empty()) {
+        return 0;
+    }
     size_t count = 0;
     wstring wtext = UTF8ToWide(text + " ");
     for (size_t i = 1; i < wtext.size(); i++) {

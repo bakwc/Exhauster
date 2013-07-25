@@ -46,6 +46,7 @@ void DecodeTree(tree<HTML::Node>& dom, string charsetFrom);
 void AddDistance(const string& path, size_t from, float& distance);
 float GetPathDistance(const string& path1, const string& path2);
 string GetCommonPath(const string& path1, const string& path2);
+string GetBasePath(string path);
 
 
 // builds element list from dom tree

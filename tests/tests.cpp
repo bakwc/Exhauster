@@ -57,6 +57,12 @@ TEST(server, TRequestGetParam) {
     ASSERT_EQ("test", *request.GetParam("value"));
 }
 
+TEST(libexhaust, GetBasePath) {
+    ASSERT_EQ("/html/body/div:class=asd/", NExhauster::GetBasePath("/html/body/div:class=asd/"));
+    ASSERT_EQ("/html/body/div:class=asd/", NExhauster::GetBasePath("/html/body/div:class=asd/i/"));
+    ASSERT_EQ("/some/div/", NExhauster::GetBasePath("/some/div/p/i/strong/"));
+}
+
 TEST(libexhaust, GetPathDistance) {
     string path1 = "/html/body/div:class=fixed/div:class=inner/div:class=container/div:class=main/div:class=box_outer/article:class=cat_article/div:class=single_article_content;id=article_content/div:id=nrelate_flyout_placeholder/p/";
     string path2 = "/html/body/div:class=fixed/div:class=inner/div:class=container/div:class=main/div:class=box_outer;id=feature_outer/div:class=Feature_news/div:class=slider_wrap/div:class=slider_items/div:class=slider/div:class=slider_item/div:style=position:relative; overflow:hidden;/div:class=slider_caption/h2/atarget=_blank/";

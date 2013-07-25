@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <algorithm>
 #include <limits>
+#include <unordered_map>
 #include <boost/algorithm/string.hpp>
 
 #include <contrib/htmlcxx/html/utils.h>
@@ -81,14 +82,17 @@ bool ClassFiltered(string name) {
                 name == "copyright" || name == "footer" || name == "time" ||
                 name == "author" || name == "copyrights" || name == "hidden" ||
                 name == "hide" || name == "dablink" || name == "comment" ||
-                name == "comments")
+                name == "for_users_only_msg")
         {
             return true;
         }
         if (name.find("slider") != string::npos ||
                 name.find("havadurumu") != string::npos ||
                 name.find("weather") != string::npos ||
-                name.find("popup") != string::npos)
+                name.find("popup") != string::npos ||
+                name.find("comments") != string::npos ||
+                name.find("notice") != string::npos ||
+                name.find("warning") != string::npos)
         {
             return true;
         }
@@ -509,6 +513,30 @@ string GetCommonPath(const string& path1, const string& path2) {
     return path1.substr(0, i + 1);
 }
 
+string GetBasePath(string path) {
+    boost::trim_if(path, boost::is_any_of("/"));
+    vector<string> pathParts;
+    boost::algorithm::split(pathParts, path, boost::algorithm::is_any_of("/"));
+    int i = (int)pathParts.size() - 1;
+    for (; i > 0; i--) {
+        if (!(boost::algorithm::starts_with(pathParts[i], "b") ||
+            boost::algorithm::starts_with(pathParts[i], "i") ||
+            boost::algorithm::starts_with(pathParts[i], "ol") ||
+            boost::algorithm::starts_with(pathParts[i], "li") ||
+            boost::algorithm::starts_with(pathParts[i], "strong") ||
+            boost::algorithm::starts_with(pathParts[i], "p")))
+        {
+            break;
+        }
+    }
+    string result = "/";
+    for (size_t j = 0; j <= i; j++) {
+        result += pathParts[j] + "/";
+    }
+    return result;
+}
+
+
 void MakeElements(TElements& elements,
                       const tree<HTML::Node>& dom,
                       string path,
@@ -676,6 +704,9 @@ void MakeBlocks(vector<TContentBlock>& blocks,
         if (it->Type & TP_Link) {
             current.Links.push_back(currentText);
         }
+        if (it->Type & TP_Header) {
+            current.Headers.push_back(currentText);
+        }
     }
 
     if (CalcWordsCount(current.Text) > 6) {
@@ -702,91 +733,77 @@ bool SimmilarTitle(const string& title, const vector<string>& titles) {
     return false;
 }
 
-void PrepareBlocks(vector<TContentBlock>& blocks,
+bool SimmilarDescription(const string& text, const string& normalizedDescription) {
+    return NormalizeText(text).find(normalizedDescription);
+}
+
+bool SameTexts(const string& text1, const string& text2) {
+    return NormalizeText(text1).find(NormalizeText(text2)) != string::npos;
+}
+
+bool IsGoodText(const string& text, size_t links, size_t headers) {
+    size_t wordsCount = CalcWordsCount(text);
+    if (((float)links / (float)wordsCount > 0.1) ||
+            ((headers > 1) && ((float)headers / (float)wordsCount > 0.02)))
+    {
+        return false;
+    }
+    return true;
+}
+
+void PrepareBlocks2(vector<TContentBlock>& blocks,
                    const vector<string>& titles,
                    const string& mainTitle,
                    const string& description)
 {
-    size_t mainBlock = 0;
-    bool firstBlockGood = false;
+    size_t maxBlock = (size_t)-1;
+    for (size_t i = 0; i < blocks.size(); i++) {
+        if (( maxBlock == (size_t)-1 ||
+              blocks[i].Text.size() > blocks[maxBlock].Text.size()) &&
+                IsGoodText(blocks[i].Text,
+                           blocks[i].Links.size(),
+                           blocks[i].Headers.size()))
+        {
+            maxBlock = i;
+        }
+    }
+
+    if (maxBlock == (size_t)-1) {
+        maxBlock = 0;
+        for (size_t i = 1; i < blocks.size(); i++) {
+            if (blocks[i].Text.size() > blocks[maxBlock].Text.size()) {
+                maxBlock = i;
+            }
+        }
+    }
+
+    blocks[maxBlock].Type = BT_MainContent;
 
     string normalizedDescr = NormalizeText(description);
-    if (description.size() > 10) {
-        for (int i = (int)blocks.size() - 1; i >= 0; i--) {
-            if (NormalizeText(blocks[i].Text).find(
-                        normalizedDescr.substr(normalizedDescr.size() * 0.1,
-                                              normalizedDescr.size() * 0.8))
-                                != string::npos)
-            {
-                blocks[mainBlock].Type = BT_AdditionalContent;
-                mainBlock = i;
-                if (i == 0) {
-                    firstBlockGood = true;
-                }
-            }
+    normalizedDescr = normalizedDescr.substr(normalizedDescr.size() * 0.1,
+                            normalizedDescr.size() * 0.8);
+
+    bool totalMerge = CalcWordsCount(blocks[maxBlock].Text) < 55;
+
+    for (size_t i = maxBlock - 1; i != (size_t)-1; i--) {
+        if (((SimmilarTitle(blocks[i].Title, titles) ||
+             SimmilarDescription(blocks[i].Text, normalizedDescr) &&
+             !SameTexts(blocks[maxBlock].Text, blocks[i].Text)) &&
+                IsGoodText(blocks[i].Text,
+                           blocks[i].Links.size(),
+                           blocks[i].Headers.size())) ||
+                totalMerge ||
+                GetBasePath(blocks[i].Path) == GetBasePath(blocks[maxBlock].Path))
+        {
+            totalMerge = true;
+            blocks[maxBlock].Text = blocks[i].Text + " " + blocks[maxBlock].Text;
         }
     }
 
-    if (blocks.size() >= 2 && mainBlock == 0) {
-        // Если второй блок - больше чем первый, то
-        // либо клеим первый блок ко второму,
-        // либо вообще удаляем первый блок
-
-        if (blocks[1].Text.find(
-                    blocks[0].Text.substr(0, blocks[0].Text.size() * 0.8))
-                            != string::npos)
-        {
-            blocks[0].Type = BT_Removed;
-            mainBlock = 1;
-        } else if (blocks[1].Text.size() > blocks[0].Text.size() * 2 &&
-                   (CalcWordsCount(blocks[0].Text) < 50 ||
-                    blocks[0].Links.size() > blocks[1].Links.size())) {
-            if ((CalcWordsCount(blocks[0].Text) > 6 && blocks[0].Links.empty())
-                    || firstBlockGood)
-            {
-                blocks[0].Text += " " + blocks[1].Text;
-                blocks[1].Type = BT_Removed;
-            } else {
-                blocks[0].Type = BT_Removed;
-                mainBlock = 1;
-            }
-        } else
-
-        // пропускаем первые несколько блоков с одинаковым path
-        // и берём следующий после них, в случае если у него много
-        // контента
-        if (blocks[0].Path == blocks[1].Path) {
-            size_t c = 1;
-            while (c < blocks.size() &&
-                   blocks[c].Path == blocks[c - 1].Path)
-            {
-                c++;
-            }
-            if (c != blocks.size() &&
-                    blocks[c].Type != BT_Removed &&
-                    blocks[c].Text.size() > blocks[mainBlock].Text.size() * 2)
-            {
-                mainBlock = c;
-            }
-        } else
-
-        // Если заголовок второго блока совпадает с заголовком страницы
-        // то считаем его основным контентом
-        {
-            if (!SimmilarTitle(blocks[0].Title, titles) &&
-                    SimmilarTitle(blocks[1].Title, titles) &&
-                    ((float)blocks[1].Text.size() / (float)blocks[0].Text.size()) > 0.4)
-            {
-                mainBlock = 1;
-                blocks[1].Type = BT_MainContent;
-                blocks[0].Type = BT_AdditionalContent;
-            }
+    for (size_t i = maxBlock + 1; i < blocks.size(); i++) {
+        if (GetBasePath(blocks[i].Path) == GetBasePath(blocks[maxBlock].Path)) {
+            blocks[maxBlock].Text += blocks[i].Text + " " ;
         }
-    }
-
-    blocks[mainBlock].Type = BT_MainContent;
-    if (blocks[mainBlock].Title.empty()) {
-        blocks[mainBlock].Title = mainTitle;
     }
 }
 
@@ -799,6 +816,7 @@ TContentBlock ExhausteMainContent(const string& htmlData,
             return blocks[i];
         }
     }
+    return blocks[0];
 }
 
 
@@ -848,7 +866,7 @@ vector<TContentBlock> ExhausteContent(const string& htmlData,
         DumpBlocks(blocks, *settings.DebugOutput);
     }
 
-    PrepareBlocks(blocks, titles, title, description);
+    PrepareBlocks2(blocks, titles, title, description);
 
     if (settings.DebugOutput) {
         DumpBlocks(blocks, *settings.DebugOutput);

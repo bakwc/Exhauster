@@ -5,4 +5,5 @@ add_library (htmlcxx CharsetConverter.cc
                      Uri.cc
                      utils.cc
                      Extensions.cc
-                     ParserDom.cc)
+                     ParserDom.cc
+                     tree.h)
