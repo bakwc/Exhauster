@@ -23,19 +23,25 @@ include_directories(${PROJECT_SOURCE_DIR}
                     ${Boost_INCLUDE_DIRS}
                     ${GTEST_INCLUDE_DIRS}
                     ${CURL_INCLUDE_DIR}
-                    ${ICONV_INCLUDE_DIR})
+                    ${ICONV_INCLUDE_DIR}
+                    ${PROJECT_BINARY_DIR})
 
 link_directories (${PROJECT_BINARY_DIR}/utils
                   ${PROJECT_BINARY_DIR}/libexhaust
                   ${PROJECT_BINARY_DIR}/server
                   ${PROJECT_BINARY_DIR}/contrib/htmlcxx/html
                   ${PROJECT_BINARY_DIR}/contrib/mongoose
+                  ${PROJECT_BINARY_DIR}/contrib/lib_json
+                  ${PROJECT_BINARY_DIR}/contrib/json
+                  ${PROJECT_BINARY_DIR}/contrib/cpptemplate
                   ${PROJECT_BINARY_DIR}/contrib/stuff)
 
 add_subdirectory(contrib)
 add_subdirectory(utils)
+add_subdirectory(respacker)
 add_subdirectory(libexhaust)
 add_subdirectory(server)
 add_subdirectory(fetcher)
 add_subdirectory(exhauster)
 add_subdirectory(tests)
+add_subdirectory(web)

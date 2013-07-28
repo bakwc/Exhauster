@@ -54,6 +54,10 @@ void THttpServer::HandleAction(const string& action, TRequestHandler handler) {
     Handlers.insert(pair<string, TRequestHandler>(action, handler));
 }
 
+void THttpServer::HandleActionDefault(TRequestHandler handler) {
+    DefaultHandler = handler;
+}
+
 int THttpServer::ProcessRequest(struct mg_connection* conn) {
     struct mg_request_info* requestStruct = mg_get_request_info(conn);
     THttpServer* server = static_cast<THttpServer*>(requestStruct->user_data);
@@ -88,11 +92,13 @@ int THttpServer::ProcessRequest(struct mg_connection* conn) {
     optional<TResponse> response;
     if (server->Handlers.find(request.URI) != server->Handlers.end()) {
         response = server->Handlers[request.URI](request);
+    } else {
+        response = server->DefaultHandler(request);
     }
 
     if (!response.is_initialized()) {
         response = TResponse();
-        response->Data = "<h3>Unsupported request! </h3>\n";
+        response->Data = "<h3>Unsupported request: " + request.URI + " </h3>\n";
         response->Code = 404;
         response->ContentType("text/html");
     }
@@ -101,12 +107,12 @@ int THttpServer::ProcessRequest(struct mg_connection* conn) {
               "HTTP/1.1 %d OK\r\n"
               "%s"
               "Content-Length: %d\r\n"
-              "\r\n"
-              "%s",
+              "\r\n",
               response->Code,
               response->PrepareHeaders().c_str(),
-              response->Data.size(),
-              response->Data.c_str());
+              response->Data.size());
+
+    mg_write(conn, response->Data.c_str(), response->Data.size());
 
     return 1;
 }

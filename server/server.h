@@ -58,13 +58,17 @@ public:
     THttpServer(const TSettings& settings);
     ~THttpServer();
     void HandleAction(const string& action, TRequestHandler handler);
+    void HandleActionDefault(TRequestHandler handler);
 private:
     static int ProcessRequest(struct mg_connection* conn);
 private:
     struct mg_context *Ctx;
     struct mg_callbacks Callbacks;
     TRequestHandlers Handlers;
+    TRequestHandler DefaultHandler;
     TSettings Settings;
 };
+
+
 
 } // NHttpServer

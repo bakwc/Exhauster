@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Exhauster - HTML content extraction service</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <!-- Le styles -->
+    <link href="css/bootstrap.css" rel="stylesheet">
+    <style type="text/css">
+      body {
+        padding-top: 20px;
+        padding-bottom: 40px;
+      }
+
+      /* Custom container */
+      .container-narrow {
+        margin: 0 auto;
+        max-width: 700px;
+      }
+      .container-narrow > hr {
+        margin: 30px 0;
+      }
+
+      /* Main marketing message and sign up button */
+      .jumbotron {
+        margin: 60px 0;
+        text-align: center;
+      }
+      .jumbotron h1 {
+        font-size: 72px;
+        line-height: 1;
+      }
+      .jumbotron .btn {
+        font-size: 21px;
+        padding: 14px 24px;
+      }
+
+      /* Supporting marketing content */
+      .marketing {
+        margin: 60px 0;
+      }
+      .marketing p + h4 {
+        margin-top: 28px;
+      }
+      .beta {
+		vertical-align: center;
+		font-size: 14px;
+		color: #005EB0;
+      }
+    </style>
+    <link href="css/bootstrap-responsive.css" rel="stylesheet">
+
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="js/html5shiv.js"></script>
+    <![endif]-->
+
+    <!-- Fav and touch icons -->
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="ico/apple-touch-icon-144-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="ico/apple-touch-icon-114-precomposed.png">
+      <link rel="apple-touch-icon-precomposed" sizes="72x72" href="ico/apple-touch-icon-72-precomposed.png">
+                    <link rel="apple-touch-icon-precomposed" href="ico/apple-touch-icon-57-precomposed.png">
+                                   <link rel="shortcut icon" href="ico/favicon.png">
+  </head>
+
+  <body>
+
+    <div class="container-narrow">
+
+      <div class="masthead">
+        <ul class="nav nav-pills pull-right">
+          <li class="active"><a href="/">Home</a></li>
+          <li><a href="https://github.com/bakwc/Exhauster">Sources</a></li>
+          <li><a href="mailto:info@exhauster.com">Contact</a></li>
+        </ul>
+        <h3 class="muted">Exhauster <sup><sup class="beta">beta</sup></sup></h3>
+      </div>
+
+      <hr>
+
+      <div class="jumbotron">
+        <h1>Content extract API</h1>
+        <p class="lead">Service for HTML content extraction. Extracts useful data from <BR>web pages.
+        Based on DOM tree analysis.</p>
+
+        <div class="navbar-form">
+            <input type="text" class="span3" id="request-url" placeholder="Enter url here">
+        </div>
+
+        <br>
+
+        <div class="btn btn-large btn-success" id="try-button">Try now</div>
+        <br><br>
+        <a href="#api-descr">API description</a><br>
+        <a href="#limits">Limits</a>
+      </div>
+
+      <hr>
+        <div id="example">
+        </div>
+      <hr>
+
+      <h4 id="api-descr">API description</h4>
+      <ul>
+        <li>Request:
+            <pre class="prettyprint">http://exhauster.com/exhause?url=http://example.com/</pre>
+        </li>
+        <li>Normal response:
+            <pre class="prettyprint">
+{
+  "status": 0,
+  "title": "Example Com Title",
+  "text": "Example.com page main content text. Some text."
+}</pre></li>
+        <li>Error response:
+            <pre class="prettyprint">
+{
+  "error" : "fetching faild",
+  "status" : 2
+}</pre></li>
+        Possible statuses:
+
+<pre>
+{% for st in statuses %}{$st.code} - {$st.status}
+{% endfor %}
+</pre>
+
+      </li>
+      </ul>
+      <h4>Limits</h4>
+      <p>For now there are limits for one IP:
+      <ul>
+        <li> {$minute_limit} requests per minute</li>
+        <li> {$day_limit} requests per day</p>
+      </ul>
+      <a href="mailto:info@exhauster.com">Contact</a> us if you need more.
+
+      <hr>
+      <div class="footer">
+        <p>&copy; Exhauster.com 2013</p>
+      </div>
+
+    </div> <!-- /container -->
+
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="js/jquery.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script>
+
+        var entityMap = {
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': '&quot;',
+            "'": '&#39;',
+            "/": '&#x2F;'
+        };
+
+        function escapeHtml(string) {
+            return String(string).replace(/[<>"'\/]/g, function (s) {
+            return entityMap[s];
+            });
+        }
+
+        function send_request() {
+                var url = $("#request-url").val();
+                console.log(url);
+                $("#example").html("<center><img src=\"/img/ajax-loader.gif\" /></center>");
+                $.get('/exhause?url=' + url, {}, function(response) {
+                    var status = response["status"];
+                    if (status == 0) {
+                        var title = escapeHtml(response["title"]);
+                        var text = escapeHtml(response["text"]);
+                        $("#example").html("<h3>" + title + "</h3><p>" + text + "</p>");
+                        $('html, body').animate({
+                            scrollTop: $("#example").offset().top
+                        }, 400);
+                    } else {
+                        $("#example").html("<div class=\"alert\"><strong>Error: </strong> " + response["error"] + "</div>");
+                        console.log("exhause error");
+                    }
+                }, 'json');
+        }
+
+        $(document).ready(function() {
+            $("#try-button").click(send_request);
+            $('#request-url').on('keypress', function (event) {
+                if(event.which == '13') {
+                    send_request();
+                }
+            });
+        });
+
+        
+    </script>
+  </body>
+</html>

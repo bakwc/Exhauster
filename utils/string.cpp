@@ -7,10 +7,17 @@
 #include "string.h"
 
 string LoadFile(const string& fileName) {
-    std::ifstream ifs(fileName);
+    std::ifstream ifs;
+    ifs.open(fileName, fstream::binary | fstream::in);
     std::string content((std::istreambuf_iterator<char>(ifs)),
                         (std::istreambuf_iterator<char>()));
     return content;
+}
+
+void SaveFile(const string& fileName, const string& data) {
+    std::ofstream ofs;
+    ofs.open(fileName, fstream::binary | fstream::out);
+    ofs.write(data.c_str(), data.size());
 }
 
 wstring UTF8ToWide(const string& text) {
@@ -22,6 +29,9 @@ string WideToUTF8(const wstring& text) {
 }
 
 string RecodeText(string text, const string& from, const string& to) {
+    if (text.empty()) {
+        return text;
+    }
     iconv_t cnv = iconv_open(to.c_str(), from.c_str());
     if (cnv == (iconv_t)-1) {
         iconv_close(cnv);

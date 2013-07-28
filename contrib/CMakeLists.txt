@@ -1,3 +1,6 @@
 add_subdirectory(htmlcxx)
 add_subdirectory(mongoose)
 add_subdirectory(stuff)
+add_subdirectory(lib_json)
+add_subdirectory(json)
+add_subdirectory(cpptemplate)

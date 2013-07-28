@@ -1,6 +1,7 @@
 #include <sstream>
 #include <curl/curl.h>
 #include <boost/thread/detail/singleton.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include "fetcher.h"
 
@@ -9,6 +10,9 @@ namespace NHttpFetcher {
 size_t write_data(char *ptr, size_t size, size_t nmemb, void *userdata) {
     string* str = (string*)userdata;
     size_t count = size * nmemb;
+    if (str->size() + count > MAX_FILE_SIZE) {
+        return -1;
+    }
     *str += std::string(ptr, count);
     return count;
 }
@@ -90,6 +94,25 @@ optional<string> FetchUrl(const string& url, chrono::milliseconds timeout) {
 
 TResponse FetchUrl(const TRequest& request) {
     return Curl.FetchUrl(request);
+}
+
+optional<string> TResponse::ParseCharset() {
+    vector<string> lines;
+    boost::algorithm::split(lines, Headers, boost::algorithm::is_any_of("\n"));
+    for (size_t i = 0; i < lines.size(); i++) {
+        boost::algorithm::to_lower(lines[i]);
+        if (boost::algorithm::starts_with(lines[i], "content-type")) {
+            size_t from = lines[i].find("charset=");
+            if (from != string::npos) {
+                size_t to = lines[i].find(';', from + 1);
+                if (to == string::npos) {
+                    to = lines[i].size();
+                }
+                return lines[i].substr(from + 8, to - from - 8);
+            }
+        }
+    }
+    return optional<string>();
 }
 
 } // NHttpFetcher

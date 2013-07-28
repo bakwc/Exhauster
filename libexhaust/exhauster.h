@@ -16,11 +16,10 @@ namespace NExhauster {
 TContentBlock ExhausteMainContent(const string& htmlData,
                            const TSettings& settings = TSettings());
 
+// internal functions
+
 vector<TContentBlock> ExhausteContent(const string& htmlData,
                                const TSettings& settings = TSettings());
-
-
-// internal functions
 
 bool CanBeDate(const string& word);
 bool TextFiltered(const string& text);

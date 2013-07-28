@@ -10,6 +10,8 @@ using namespace boost;
 
 namespace NHttpFetcher {
 
+const size_t MAX_FILE_SIZE = 256 * 1024;
+
 struct TRequest {
     TRequest();
     string Url;
@@ -27,6 +29,7 @@ struct TResponse {
     string Error;
     string Data;
     string Headers;
+    optional<string> ParseCharset();
 };
 
 optional<string> FetchUrl(const string& url,

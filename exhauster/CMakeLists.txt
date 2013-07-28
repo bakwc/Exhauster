@@ -7,4 +7,7 @@ target_link_libraries(exhauster
                         server
                         fetcher
                         libstuff
+                        json
+                        web
+                        cpptemplate
                         ${Boost_LIBRARIES})

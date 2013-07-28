@@ -5,6 +5,7 @@
 using namespace std;
 
 string LoadFile(const string& fileName);
+void SaveFile(const string& fileName, const string& data);
 wstring UTF8ToWide(const string& text);
 string WideToUTF8(const wstring& text);
 string RecodeText(string text, const string& from, const string& to);

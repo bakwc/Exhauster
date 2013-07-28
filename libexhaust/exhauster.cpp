@@ -92,7 +92,9 @@ bool ClassFiltered(string name) {
                 name.find("popup") != string::npos ||
                 name.find("comments") != string::npos ||
                 name.find("notice") != string::npos ||
-                name.find("warning") != string::npos)
+                name.find("warning") != string::npos ||
+                name.find("button") != string::npos ||
+                name.find("menu") != string::npos)
         {
             return true;
         }
@@ -171,7 +173,7 @@ bool HasInterestingContent(tree<HTML::Node>::iterator it,
             *words += wordsCnt;
         }
         if (hard) {
-            return ((wordsCnt >= wordsThreshold && HasPunct(text)) ||
+            return ((wordsCnt >= wordsThreshold) ||
                     (wordsCnt >= 2 && parentTag == "b")) &&
                     !TextFiltered(text);
         } else {
@@ -198,7 +200,6 @@ bool HasInterestingContent(tree<HTML::Node>::iterator it,
     if (result && IsHeader(tag)) {
         it->tagName("div");
     }
-
     return result;
 }
 
@@ -221,7 +222,8 @@ bool Filter(tree<HTML::Node>& dom,
                 tag == "style" || tag == "textarea" || tag == "footer" ||
                 tag == "aside" || tag == "select" || tag == "option" ||
                 tag == "noscript" || tag == "title" || tag == "meta" ||
-                tag == "link") // "ul" should stay
+                tag == "link" || tag == "label" ||
+                tag == "noindex") // "ul" should stay
         {
             return true;
         }
@@ -647,6 +649,11 @@ void MakeBlocks(vector<TContentBlock>& blocks,
             }
         }
         currentText = DecodeHtmlEntities(currentText);
+
+        if (currentText.size() < 6 || CalcWordsCount(currentText) < 2) {
+            it->Type &= ~TP_Header;
+        }
+
         float distance = numeric_limits<float>::max();
 
         if (next != elements.end()) {
@@ -751,6 +758,19 @@ bool IsGoodText(const string& text, size_t links, size_t headers) {
     return true;
 }
 
+bool IsGoodLinks(const vector<string>& links) {
+    unordered_map<string, size_t> linksMap;
+    for (size_t i = 0; i < links.size(); i++) {
+        linksMap[links[i]]++;
+    }
+    for (auto& link: linksMap) {
+        if (link.second > 3) {
+            return false;
+        }
+    }
+    return true;
+}
+
 void PrepareBlocks2(vector<TContentBlock>& blocks,
                    const vector<string>& titles,
                    const string& mainTitle,
@@ -762,7 +782,8 @@ void PrepareBlocks2(vector<TContentBlock>& blocks,
               blocks[i].Text.size() > blocks[maxBlock].Text.size()) &&
                 IsGoodText(blocks[i].Text,
                            blocks[i].Links.size(),
-                           blocks[i].Headers.size()))
+                           blocks[i].Headers.size()) &&
+                IsGoodLinks(blocks[i].Links))
         {
             maxBlock = i;
         }
@@ -801,10 +822,14 @@ void PrepareBlocks2(vector<TContentBlock>& blocks,
     }
 
     for (size_t i = maxBlock + 1; i < blocks.size(); i++) {
-        if (GetBasePath(blocks[i].Path) == GetBasePath(blocks[maxBlock].Path)) {
+        if (GetBasePath(blocks[i].Path) == GetBasePath(blocks[maxBlock].Path) &&
+                IsGoodText(blocks[i].Text, blocks[i].Links.size(), blocks[i].Headers.size()))
+        {
             blocks[maxBlock].Text += blocks[i].Text + " " ;
         }
     }
+
+    blocks[maxBlock].Title = mainTitle;
 }
 
 TContentBlock ExhausteMainContent(const string& htmlData,
@@ -835,14 +860,19 @@ vector<TContentBlock> ExhausteContent(const string& htmlData,
     GetTitle(dom.begin(), title, titles);
     GetDescription(dom.begin(), description);
 
-    Filter(dom, dom.begin(), optional<tree<HTML::Node>::iterator>());
     if (charset != "utf8" && charset != "utf-8") {
         DecodeTree(dom, charset);
         string newTitle = RecodeText(title, charset, "UTF-8");
+        string newDescription = RecodeText(description, charset, "UTF-8");
         if (!newTitle.empty()) {
             title = newTitle;
         }
+        if (!newDescription.empty()) {
+            description = newDescription;
+        }
     }
+
+    Filter(dom, dom.begin(), optional<tree<HTML::Node>::iterator>());
 
     if (settings.DebugOutput) {
         DumpTree(dom, *settings.DebugOutput);
