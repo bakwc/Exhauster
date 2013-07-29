@@ -3,6 +3,7 @@
 
 #include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "server.h"
 
@@ -17,10 +18,10 @@ TSettings::TSettings(unsigned short port)
 const char** TSettings::PrepareSettings() {
     Options.push_back("listening_ports");
     vector<string> ports;
-    for (auto p: Ports) ports.push_back(to_string(p));
+    for (auto p: Ports) ports.push_back(boost::lexical_cast<string>(p));
     Options.push_back(boost::algorithm::join(ports, ","));
     Options.push_back("num_threads");
-    Options.push_back(to_string(Threads));
+    Options.push_back(boost::lexical_cast<string>(Threads));
     for (size_t i = 0; i < Options.size(); i++) {
         COptions.push_back(Options[i].c_str());
     }

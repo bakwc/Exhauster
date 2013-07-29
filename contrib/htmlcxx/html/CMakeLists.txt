@@ -1,5 +1,5 @@
 
-add_library (htmlcxx CharsetConverter.cc
+add_library (htmlcxx
                      Node.cc
                      ParserSax.cc
                      Uri.cc

@@ -3,11 +3,12 @@
 #include <cstdlib>
 #include <cstdio>
 #include <inttypes.h>
+#include <boost/filesystem.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <utils/string.h>
 
 using namespace std;
-using namespace boost::filesystem3;
+using namespace boost::filesystem;
 
 path relativePath( const path& base, const path &relativeTo )
 {

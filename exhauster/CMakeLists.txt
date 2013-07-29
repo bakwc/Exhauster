@@ -6,7 +6,7 @@ target_link_libraries(exhauster
                         libexhaust
                         server
                         fetcher
-                        libstuff
+                        stuff
                         json
                         web
                         cpptemplate

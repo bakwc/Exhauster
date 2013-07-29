@@ -97,10 +97,10 @@ public:
 
         Json::Value root;
         Json::StyledWriter writer;
-        root["last_clear"] = (size_t)chrono::duration_cast<chrono::seconds>(
+        root["last_clear"] = (Json::UInt)chrono::duration_cast<chrono::seconds>(
                             LastLimitsClear.time_since_epoch()).count();
         for (auto& r: Requests) {
-            root["requests"][to_string(r.first)] = r.second.DayRequests;
+            root["requests"][boost::lexical_cast<string>(r.first)] = (Json::UInt)r.second.DayRequests;
         }
         string data = writer.write(root);
         try {
@@ -134,7 +134,7 @@ public:
                 TStats stats;
                 string ip = ipAddresses[i];
                 stats.DayRequests = requests[ip].asUInt();
-                newRequests[stol(ip)] = stats;
+                newRequests[boost::lexical_cast<long>(ip)] = stats;
             }
 
             lock_guard<mutex> guard(Lock);

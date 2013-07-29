@@ -7,7 +7,7 @@
 #include <libexhaust/exhauster.h>
 #include <server/server.h>
 
-using namespace boost::filesystem3;
+using namespace boost::filesystem;
 
 TEST(utils, CalcWordsCount) {  
     ASSERT_EQ(0, CalcWordsCount(""));
