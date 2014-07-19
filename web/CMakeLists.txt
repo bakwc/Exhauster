@@ -9,3 +9,5 @@ add_custom_command(
             ${PROJECT_SOURCE_DIR}/web/root/css/bootstrap.css)
 
 add_library(web resources.cpp)
+
+add_dependencies(web respacker)

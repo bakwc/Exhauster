@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
 project(exhauster)
 
-set(CMAKE_CXX_FLAGS "-std=c++0x")
+set(CMAKE_CXX_FLAGS "-std=c++0x -ldl")
 
 set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)
@@ -9,6 +9,8 @@ set(Boost_USE_STATIC_RUNTIME OFF)
 
 find_package(Boost 1.48.0 COMPONENTS locale system filesystem REQUIRED)
 find_package(GTest REQUIRED)
+
+FIND_PACKAGE(OpenSSL)
 
 FIND_PATH(CURL_INCLUDE_DIR NAMES curl/curl.h)
 FIND_PATH(ICONV_INCLUDE_DIR NAMES iconv.h)
@@ -21,6 +23,7 @@ add_definitions(-DTEST_DATA_DIR="${PROJECT_SOURCE_DIR}/test_data/")
 
 include_directories(${PROJECT_SOURCE_DIR}
                     ${Boost_INCLUDE_DIRS}
+                    ${OPENSSL_INCLUDE_DIRS}
                     ${GTEST_INCLUDE_DIRS}
                     ${CURL_INCLUDE_DIR}
                     ${ICONV_INCLUDE_DIR}
@@ -36,9 +39,9 @@ link_directories (${PROJECT_BINARY_DIR}/utils
                   ${PROJECT_BINARY_DIR}/contrib/cpptemplate
                   ${PROJECT_BINARY_DIR}/contrib/stuff)
 
+add_subdirectory(respacker)
 add_subdirectory(contrib)
 add_subdirectory(utils)
-add_subdirectory(respacker)
 add_subdirectory(libexhaust)
 add_subdirectory(server)
 add_subdirectory(fetcher)
